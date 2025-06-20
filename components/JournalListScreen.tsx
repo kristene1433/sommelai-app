@@ -26,7 +26,7 @@ export default function JournalListScreen({ userEmail }: Props) {
 
   const fetchEntries = useCallback(async () => {
     try {
-      const res  = await fetch(`http://192.168.4.80:5000/api/journal/${userEmail}`);
+      const res  = await fetch(`https://sommelai-app-a743d57328f0.herokuapp.com/api/journal/${userEmail}`);
       const data = await res.json();
       setEntries(data);
     } catch (err) {
@@ -53,7 +53,7 @@ export default function JournalListScreen({ userEmail }: Props) {
         style: 'destructive',
         onPress: async () => {
           try {
-            const res = await fetch(`http://192.168.4.80:5000/api/journal/${id}`, {
+            const res = await fetch(`https://sommelai-app-a743d57328f0.herokuapp.com/api/journal/${id}`, {
               method: 'DELETE',
             });
             if (res.ok) {

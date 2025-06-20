@@ -20,7 +20,7 @@ type LocalItem = {
   address?: string; url?: string;
 };
 
-const BASE_URL = 'http://192.168.4.80:5000';
+const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
 export default function WineChat({ userPlan, userEmail }: Props) {
   const [question,  setQuestion]  = useState('');

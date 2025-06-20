@@ -29,7 +29,7 @@ export default function WineJournalScreen() {
   const { userEmail, entry } = params;
 
   const isEdit = Boolean(entry?._id);
-  const BASE   = 'http://192.168.4.80:5000/api/journal';
+  const BASE   = 'https://sommelai-app-a743d57328f0.herokuapp.com';
   const URL    = isEdit ? `${BASE}/${entry!._id}` : `${BASE}/add`;
   const METHOD = isEdit ? 'PUT' : 'POST';
 

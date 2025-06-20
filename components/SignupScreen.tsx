@@ -8,11 +8,15 @@ import {
   Pressable,
 } from 'react-native';
 
+
 type Props = {
   navigation: any;
+  fetchPlan: (email: string) => Promise<void>;
 };
 
-export default function SignupScreen({ navigation }: Props) {
+
+
+export default function SignupScreen({ navigation, fetchPlan }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 

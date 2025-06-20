@@ -17,7 +17,7 @@ type Props = {
   userEmail: string;
 };
 
-const BASE_URL = 'http://192.168.4.80:5000';
+const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
 export default function PreferencesScreen({ userEmail }: Props) {
   const [selectedWines,   setSelectedWines]   = useState<string[]>([]);

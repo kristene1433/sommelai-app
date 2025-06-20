@@ -11,7 +11,7 @@ import {
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const WineBg = require('../assets/wine-bg.jpg');
-const BASE_URL = 'http://192.168.4.80:5000';
+const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
 // 1. Define your stack routes here:
 type RootStackParamList = {
@@ -24,11 +24,16 @@ type RootStackParamList = {
 // 2. Type for your navigation prop:
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
+
 type Props = {
   navigation: LoginScreenNavigationProp;
+  fetchPlan: (email: string) => Promise<void>;
 };
 
-export default function LoginScreen({ navigation }: Props) {
+
+
+
+export default function LoginScreen({ navigation, fetchPlan }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
