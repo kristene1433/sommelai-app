@@ -1,3 +1,4 @@
+// models/Preference.js
 const mongoose = require('mongoose');
 
 const preferenceSchema = new mongoose.Schema(
@@ -18,9 +19,10 @@ const preferenceSchema = new mongoose.Schema(
 
     wineTypes:      [String],
     flavorProfiles: [String],
-    plan: { type: String, enum: ['free', 'paid'], default: 'free' },
+    plan: { type: String, enum: ['paid'], default: 'paid' },  // << Only paid
   },
   { timestamps: true }
 );
 
 module.exports = mongoose.model('Preference', preferenceSchema);
+

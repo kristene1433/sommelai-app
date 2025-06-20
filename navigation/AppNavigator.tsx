@@ -12,30 +12,19 @@ const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
 export default function AppNavigator() {
   const [userIsLoggedIn, setUserIsLoggedIn] = useState(false);
-  const [userPlan,  setUserPlan ] = useState<'free' | 'paid' | null>(null);
+  const [userPlan,  setUserPlan ] = useState<'paid' | null>(null); // only 'paid'
   const [userEmail, setUserEmail] = useState('');
 
   /* -------------------------------------------------
-     Fetch plan; if user isn’t in DB yet (404) create
-     a default FREE document so login succeeds.
+     Fetch plan; Only allow paid users. No free user creation!
   --------------------------------------------------*/
+  // Only keep fetch, remove auto-create:
   const fetchUserPlan = async (email: string) => {
     try {
       const res = await fetch(`${BASE_URL}/api/preferences/${email}`);
-
       if (res.status === 404) {
-        // create a default free entry
-        await fetch(`${BASE_URL}/api/preferences`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            plan: 'free',
-            wineTypes: [],
-            flavorProfiles: [],
-          }),
-        });
-        setUserPlan('free');
+        alert('No preferences found. Please make sure you have completed payment and registration.');
+        return;
       } else if (res.ok) {
         const data = await res.json();
         setUserPlan(data.plan);
@@ -50,6 +39,7 @@ export default function AppNavigator() {
       alert('Could not connect to server. Is the backend running?');
     }
   };
+
 
   /* Central logout helper passed to MainTabs > Profile */
   const logout = () => {
@@ -89,3 +79,4 @@ export default function AppNavigator() {
     </Stack.Navigator>
   );
 }
+

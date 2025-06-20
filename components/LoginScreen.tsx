@@ -46,11 +46,17 @@ export default function LoginScreen({ navigation, fetchPlan }: Props) {
           body: JSON.stringify({ email, password }),
         });
         const data = await res.json();
+        console.log('Login response:', data);
+  
         if (data.error) {
           alert(data.error);
+        } else if (data.success) {
+          // This triggers your app context to switch to logged in!
+          await fetchPlan(email); // <-- This sets user state in AppNavigator
+          // Optionally clear password
+          setPassword('');
         } else {
-          // Successful login, route to your app's main screen
-          navigation.navigate('AppMain');
+          alert('Unknown error. Please try again.');
         }
       } catch (err) {
         alert('Login failed. Please try again.');
@@ -59,6 +65,7 @@ export default function LoginScreen({ navigation, fetchPlan }: Props) {
       alert('Please enter email and password');
     }
   };
+  
 
   return (
     <ImageBackground source={WineBg} style={styles.bg}>

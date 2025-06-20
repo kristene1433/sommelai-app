@@ -8,7 +8,8 @@ router.post('/', async (req, res) => {
   const {
     email,
     firstName, lastName, address, city, state, zip, areaCode, phone,
-    wineTypes = [], flavorProfiles = [], plan,
+    wineTypes = [], flavorProfiles = [],
+    // plan,    // Do not accept plan from client!
   } = req.body;
 
   if (!email) return res.status(400).json({ message: 'Email required' });
@@ -27,7 +28,7 @@ router.post('/', async (req, res) => {
         ...(phone !== undefined && { phone }),
         wineTypes,
         flavorProfiles,
-        ...(plan ? { plan } : {}),
+        plan: 'paid',  // Always set as paid
       },
       { upsert: true, new: true }
     );
@@ -38,7 +39,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Fetch preferences by email
+// Fetch preferences by email (GET /api/preferences/:email)
 router.get('/:email', async (req, res) => {
   try {
     const pref = await Preference.findOne({ email: req.params.email });

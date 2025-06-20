@@ -2,12 +2,16 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const bodyParser = require('body-parser');
 
 dotenv.config();
 const app = express();
 
 app.use(cors());
+
+// ⚠️ Stripe webhook must come BEFORE express.json/bodyParser.json!
+app.use('/api/webhook/stripe', require('./routes/stripe-webhook'));
+
+// Now you can parse JSON for all other routes
 app.use(express.json());
 
 // 1. Journal routes
@@ -22,26 +26,28 @@ app.use('/api', searchWineLocal);
 const localWine = require('./routes/localWine');
 app.use('/api', localWine);
 
-// 4. Preferences/profile/account routes (includes change-email/password)
+// 4. Preferences/profile/account routes
 const preferenceRoutes = require('./routes/preferences');
 app.use('/api/preferences', preferenceRoutes);
 
 // 5. Vision routes
 const vision = require('./routes/vision');
-app.use('/api/vision', vision);        // e.g. POST /api/vision/somm
+app.use('/api/vision', vision); // e.g. POST /api/vision/somm
 
 // MongoDB connect
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => console.error('❌ MongoDB error:', err));
 
-// For Stripe webhook (must be raw)
-app.use('/api/webhook/stripe', require('./routes/stripe-webhook'));
-app.use(bodyParser.json()); // for other routes
-
+// Auth and Stripe checkout
 app.use(require('./routes/create-checkout-session'));
 app.use(require('./routes/auth'));
 
+app.get('/', (req, res) => {
+  res.send('API is running! 🍷');
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 
