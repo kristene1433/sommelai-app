@@ -62,34 +62,87 @@ export default function WineChat({ userPlan, userEmail }: Props) {
     try {
       const zipRes = await fetch(`${BASE_URL}/api/zip/${userEmail}`);
       const { zip } = await zipRes.json();
-      if (!zip) { setResponse('No ZIP on file. Please add it in Profile.'); return; }
-
+      if (!zip) {
+        setResponse('No ZIP on file. Please add it in Profile.');
+        // 👇 Add to chatHistory for full context:
+        setChatHistory(prev => [
+          ...prev,
+          { role: 'user', content: q },
+          { role: 'assistant', content: 'No ZIP on file. Please add it in Profile.' },
+        ]);
+        return;
+      }
+  
       const apiRes = await fetch(`${BASE_URL}/api/searchWineLocal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ zip, query: q }),
       });
-      if (!apiRes.ok) { setResponse('Local search failed.'); return; }
-
+      if (!apiRes.ok) {
+        setResponse('Local search failed.');
+        setChatHistory(prev => [
+          ...prev,
+          { role: 'user', content: q },
+          { role: 'assistant', content: 'Local search failed.' },
+        ]);
+        return;
+      }
+  
       let { results } = await apiRes.json() as { results: LocalItem[] };
-
+  
       if (prefs?.wineTypes.length) {
         const wanted = prefs.wineTypes.map(t => t.toLowerCase());
         const filtered = results.filter(r =>
           wanted.some(w => r.name.toLowerCase().includes(w)));
         if (filtered.length) results = filtered;
       }
-      if (!results.length) { setResponse('No local listings found.'); return; }
+      if (!results.length) {
+        setResponse('No local listings found.');
+        setChatHistory(prev => [
+          ...prev,
+          { role: 'user', content: q },
+          { role: 'assistant', content: 'No local listings found.' },
+        ]);
+        return;
+      }
+  
       setLocalRes(results.slice(0, 3));
+  
+      // Create a short summary for assistant reply:
+      const summary =
+        results
+          .slice(0, 3)
+          .map(
+            (r, idx) =>
+              `${idx + 1}. ${r.name} ($${r.price}) at ${r.store}${r.address ? ', ' + r.address : ''}`
+          )
+          .join('\n');
+  
+      setChatHistory(prev => [
+        ...prev,
+        { role: 'user', content: q },
+        {
+          role: 'assistant',
+          content:
+            `Here are local listings for "${q}":\n${summary}`,
+        },
+      ]);
     } catch {
       setResponse('Sorry, I could not retrieve local availability.');
+      setChatHistory(prev => [
+        ...prev,
+        { role: 'user', content: q },
+        { role: 'assistant', content: 'Sorry, I could not retrieve local availability.' },
+      ]);
     }
   };
+  
 
   // --- Text-only Ask ---
   const askSommelier = async () => {
     if (!question.trim()) return;
     setLocalRes([]);
+    setQuestion('');
 
     if (userPlan === 'free' && dailyCount >= 5) {
       setResponse('⚠️ Free plan limit reached. Upgrade to ask more questions.');
@@ -144,6 +197,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
           { role: 'user', content: question },
           { role: 'assistant', content },
         ]);
+        setQuestion(''); 
       } else { setResponse('⚠️ No answer returned.'); }
       if (userPlan === 'free') setDailyCount(c => c + 1);
     } catch {
@@ -166,6 +220,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       Alert.alert("Add a photo and a question!");
       return;
     }
+    setQuestion('');
 
     const wantsLocal = /(nearby|near me|local|in my area|where can i (find|buy|get|purchase|order)|where to (buy|get|purchase|order)|buy .* near|purchase .* near|get .* near|shop .* near)/i
       .test(question);
@@ -202,6 +257,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
           { role: 'assistant', content: json.answer },
         ]);
         setPhotoAsset(null); // clear photo after ask
+        setQuestion(''); // <-- CLEAR THE QUESTION INPUT HERE
       } else {
         Alert.alert('Vision error', json.error || 'Unable to analyze image');
       }
