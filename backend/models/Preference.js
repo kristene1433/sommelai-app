@@ -19,10 +19,12 @@ const preferenceSchema = new mongoose.Schema(
 
     wineTypes:      [String],
     flavorProfiles: [String],
+
+    body: { type: String, enum: ['Big', 'Medium', 'Light'], default: '' },  // Added body field
+
     plan: { type: String, enum: ['paid'], default: 'paid' },  // << Only paid
   },
   { timestamps: true }
 );
 
 module.exports = mongoose.model('Preference', preferenceSchema);
-

@@ -10,54 +10,56 @@ const WineJournalEntrySchema = new mongoose.Schema({
     type: String,
     validate: { validator: emailValidator, message: 'Invalid e-mail' },
   },
-  wineName:  { type: String, trim: true },
+  wineName: { type: String, trim: true },
 
-  vintage:   String,
-  region:    String,
-  producer:  String,
+  vintage: String,
+  subregion: String,
+  region: String,
+  country: String,
+  producer: String,
   varietals: String,
-  price:     String,
+  price: String,
   alcoholPercent: String,
-  servingTemp:    String,
-  dateTasted:     String,
-  whereWithWhom:  String,
-  rating:   String,
+  servingTemp: String,
+  dateTasted: String,
+  whereWithWhom: String,
+  rating: String,
   photoUrl: String,
 
   /* ------- visual ------- */
-  clarity:        String,
-  brightness:     String,
+  clarity: String,
+  brightness: String,
   colorIntensity: String,
-  hueRed:         String,
-  hueWhite:       String,
-  viscosity:      String,
+  hueRed: String,
+  hueWhite: String,
+  hueRose: String,
+  viscosity: String,
 
   /* ------- nose & palate ------- */
   aromaIntensity: String,
-  primaryAroma:   String,
+  primaryAroma: String,
   secondaryAroma: String,
-  tertiaryAroma:  String,
-  fruitCharacter: String,
-  nonFruitNotes:  String,
+  tertiaryAroma: String,
+  condition: String,          // new field: Clean, Off, Corked, Oxidized
 
   /* ------- structure ------- */
-  sweetness:     String,
-  acidity:       String,
-  tannin:        String,
-  alcoholLevel:  String,
-  body:          String,
-  texture:       String,
-  balance:       String,
-  finish:        String,
+  sweetness: String,
+  acidity: String,
+  tannin: String,
+  alcoholLevel: String,
+  body: String,
+  flavorIntensity: String,    // new field: Light, Medium, Pronounced
+  finish: String,             // new field: Short, Medium, Long
 
   /* ------- conclusion ------- */
-  qualityLevel:  String,
-  readiness:     String,
-  agePotential:  String,
-  grapeGuess:    String,
-  originGuess:   String,
+  qualityLevel: String,
+  readiness: String,
+  agePotential: String,
+  grapeGuess: String,
+  originGuess: String,
 
   dateLogged: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model('WineJournalEntry', WineJournalEntrySchema);
+

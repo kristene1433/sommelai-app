@@ -39,6 +39,7 @@ export default function AppNavigator() {
       alert('Could not connect to server. Is the backend running?');
     }
   };
+  
 
 
   /* Central logout helper passed to MainTabs > Profile */

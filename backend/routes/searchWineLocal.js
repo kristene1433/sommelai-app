@@ -21,7 +21,7 @@ router.post('/searchWineLocal', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini-search-preview',
+        model: 'gpt-oss-20b',
         web_search_options: {
           user_location: { type:'approximate', approximate:{ country:'US' } },
           search_context_size: 'low',

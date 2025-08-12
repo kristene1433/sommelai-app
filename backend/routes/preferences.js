@@ -1,3 +1,4 @@
+// routes/preferences.js
 const express = require('express');
 const router = express.Router();
 const Preference = require('../models/Preference');
@@ -9,6 +10,7 @@ router.post('/', async (req, res) => {
     email,
     firstName, lastName, address, city, state, zip, areaCode, phone,
     wineTypes = [], flavorProfiles = [],
+    body = '',  // Added body here
     // plan,    // Do not accept plan from client!
   } = req.body;
 
@@ -28,6 +30,7 @@ router.post('/', async (req, res) => {
         ...(phone !== undefined && { phone }),
         wineTypes,
         flavorProfiles,
+        body,               // Added body here
         plan: 'paid',  // Always set as paid
       },
       { upsert: true, new: true }
@@ -134,3 +137,4 @@ router.post('/change-password', async (req, res) => {
 });
 
 module.exports = router;
+

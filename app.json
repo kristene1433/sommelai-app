@@ -12,25 +12,30 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "scheme": "sommelai-app",     
+    "scheme": "sommelai-app",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourname.sommelai"   
+      "bundleIdentifier": "com.kristene1433.sommelai",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yourname.sommelai",         
+      "package": "com.kristene1433.sommelai",
       "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "expoRedirectUrl": "sommelai-app://stripe-redirect"
+      "expoRedirectUrl": "sommelai-app://stripe-redirect",
+      "eas": {
+        "projectId": "f2242574-94ff-4cbb-8d7f-28d1ffe48953"
+      }
     }
   }
 }
-

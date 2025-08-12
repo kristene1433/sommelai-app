@@ -1,3 +1,4 @@
+// WineJournalScreen.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -18,8 +19,39 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, EntryType } from '../types';
 
 type BoolSetter = React.Dispatch<React.SetStateAction<boolean>>;
-type StrSetter  = React.Dispatch<React.SetStateAction<string>>;
-type RouteP     = RouteProp<RootStackParamList, 'WineJournal'>;
+type StrSetter = React.Dispatch<React.SetStateAction<string>>;
+type RouteP = RouteProp<RootStackParamList, 'WineJournal'>;
+
+const AromaChip = ({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity
+    onPress={onPress}
+    style={[
+      styles.chip,
+      selected ? styles.chipSelected : styles.chipUnselected,
+    ]}
+  >
+    <Text style={selected ? styles.chipTextSelected : styles.chipTextUnselected}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
+
+const getTodayDate = () => {
+  const d = new Date();
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
 
 export default function WineJournalScreen() {
   const navigation = useNavigation<
@@ -29,93 +61,140 @@ export default function WineJournalScreen() {
   const { userEmail, entry } = params;
 
   const isEdit = Boolean(entry?._id);
-  const BASE   = 'https://sommelai-app-a743d57328f0.herokuapp.com';
-  const URL    = isEdit ? `${BASE}/${entry!._id}` : `${BASE}/add`;
+
+  // *** UPDATED BASE URL to include /api/journal ***
+  const BASE = 'https://sommelai-app-a743d57328f0.herokuapp.com/api/journal';
+  const URL = isEdit ? `${BASE}/${entry!._id}` : `${BASE}/add`;
   const METHOD = isEdit ? 'PUT' : 'POST';
 
-  // ...[State code unchanged, omitted for brevity]...
-
-  // -- START state code
-  const [wineName, setWineName]           = useState(entry?.wineName ?? '');
-  const [vintage, setVintage]             = useState(entry?.vintage  ?? '');
-  const [region, setRegion]               = useState(entry?.region   ?? '');
-  const [producer, setProducer]           = useState(entry?.producer ?? '');
-  const [varietals, setVarietals]         = useState(entry?.varietals?? '');
-  const [price, setPrice]                 = useState(entry?.price    ?? '');
-  const [alcoholPercent, setAlcoholPercent] = useState(entry?.alcoholPercent ?? '');
-  const [servingTemp, setServingTemp]     = useState(entry?.servingTemp ?? '');
-  const [dateTasted, setDateTasted]       = useState(entry?.dateTasted ?? '');
-  const [whereWithWhom, setWhereWithWhom] = useState(entry?.whereWithWhom ?? '');
-  const [rating, setRating]               = useState(entry?.rating ?? '');
-  const [photoUrl, setPhotoUrl]           = useState(entry?.photoUrl ?? '');
-
-  const [visualCollapsed, setVisualCollapsed]         = useState(true);
-  const [noseCollapsed, setNoseCollapsed]             = useState(true);
-  const [structureCollapsed, setStructureCollapsed]   = useState(true);
+  // Collapsible states
+  const [noseCollapsed, setNoseCollapsed] = useState(true);
+  const [wineInfoCollapsed, setWineInfoCollapsed] = useState(false);
+  const [visualCollapsed, setVisualCollapsed] = useState(true);
+  const [structureCollapsed, setStructureCollapsed] = useState(true);
   const [conclusionCollapsed, setConclusionCollapsed] = useState(true);
 
-  // Visual
-  const [clarity, setClarity]               = useState(entry?.clarity ?? '');
-  const [brightness, setBrightness]         = useState(entry?.brightness ?? '');
+  // Wine info fields
+  const [producer, setProducer] = useState(entry?.producer ?? '');
+  const [wineName, setWineName] = useState(entry?.wineName ?? '');
+  const [varietals, setVarietals] = useState(entry?.varietals ?? '');
+  const [subregion, setSubregion] = useState(entry?.subregion ?? '');
+  const [region, setRegion] = useState(entry?.region ?? '');
+  const [country, setCountry] = useState(entry?.country ?? '');
+  const [vintage, setVintage] = useState(entry?.vintage ?? '');
+  const [dateTasted, setDateTasted] = useState(entry?.dateTasted ?? '');  // NEW: dateTasted state
+  const [photoUrl, setPhotoUrl] = useState(entry?.photoUrl ?? '');
+
+  // Visual states
+  const [clarity, setClarity] = useState(entry?.clarity ?? '');
+  const [brightness, setBrightness] = useState(entry?.brightness ?? '');
   const [colorIntensity, setColorIntensity] = useState(entry?.colorIntensity ?? '');
-  const [hueRed, setHueRed]                 = useState(entry?.hueRed ?? '');
-  const [hueWhite, setHueWhite]             = useState(entry?.hueWhite ?? '');
-  const [viscosity, setViscosity]           = useState(entry?.viscosity ?? '');
+  const [hueRed, setHueRed] = useState(entry?.hueRed ?? '');
+  const [hueWhite, setHueWhite] = useState(entry?.hueWhite ?? '');
+  const [hueRose, setHueRose] = useState(entry?.hueRose ?? '');
+  const [viscosity, setViscosity] = useState(entry?.viscosity ?? '');
 
-  const [clarityOpen, setClarityOpen]                     = useState(false);
-  const [brightnessOpen, setBrightnessOpen]               = useState(false);
-  const [colorIntensityOpen, setColorIntensityOpen]       = useState(false);
-  const [hueRedOpen, setHueRedOpen]                       = useState(false);
-  const [hueWhiteOpen, setHueWhiteOpen]                   = useState(false);
-  const [viscosityOpen, setViscosityOpen]                 = useState(false);
+  // Visual dropdown open states
+  const [clarityOpen, setClarityOpen] = useState(false);
+  const [brightnessOpen, setBrightnessOpen] = useState(false);
+  const [colorIntensityOpen, setColorIntensityOpen] = useState(false);
+  const [hueRedOpen, setHueRedOpen] = useState(false);
+  const [hueWhiteOpen, setHueWhiteOpen] = useState(false);
+  const [hueRoseOpen, setHueRoseOpen] = useState(false);
+  const [viscosityOpen, setViscosityOpen] = useState(false);
 
-  // Nose & Palate
+  // Nose & Palate - aroma intensity dropdown
   const [aromaIntensity, setAromaIntensity] = useState(entry?.aromaIntensity ?? '');
-  const [primaryAroma, setPrimaryAroma]     = useState(entry?.primaryAroma ?? '');
-  const [secondaryAroma, setSecondaryAroma] = useState(entry?.secondaryAroma ?? '');
-  const [tertiaryAroma, setTertiaryAroma]   = useState(entry?.tertiaryAroma ?? '');
-  const [fruitCharacter, setFruitCharacter] = useState(entry?.fruitCharacter ?? '');
-  const [nonFruitNotes, setNonFruitNotes]   = useState(entry?.nonFruitNotes ?? '');
-
   const [aromaIntensityOpen, setAromaIntensityOpen] = useState(false);
-  const [primaryAromaOpen, setPrimaryAromaOpen]     = useState(false);
-  const [secondaryAromaOpen, setSecondaryAromaOpen] = useState(false);
-  const [tertiaryAromaOpen, setTertiaryAromaOpen]   = useState(false);
-  const [fruitCharacterOpen, setFruitCharacterOpen] = useState(false);
-  const [nonFruitNotesOpen, setNonFruitNotesOpen]   = useState(false);
 
-  // Structure
-  const [sweetness, setSweetness]         = useState(entry?.sweetness ?? '');
-  const [acidity, setAcidity]             = useState(entry?.acidity ?? '');
-  const [tannin, setTannin]               = useState(entry?.tannin ?? '');
-  const [alcoholLevel, setAlcoholLevel]   = useState(entry?.alcoholLevel ?? '');
-  const [body, setBody]                   = useState(entry?.body ?? '');
-  const [texture, setTexture]             = useState(entry?.texture ?? '');
-  const [balance, setBalance]             = useState(entry?.balance ?? '');
-  const [finish, setFinish]               = useState(entry?.finish ?? '');
+  // NEW Condition dropdown in Nose
+  const [condition, setCondition] = useState(entry?.condition ?? '');
+  const [conditionOpen, setConditionOpen] = useState(false);
 
-  const [sweetnessOpen, setSweetnessOpen]           = useState(false);
-  const [acidityOpen, setAcidityOpen]               = useState(false);
-  const [tanninOpen, setTanninOpen]                 = useState(false);
-  const [alcoholLevelOpen, setAlcoholLevelOpen]     = useState(false);
-  const [bodyOpen, setBodyOpen]                     = useState(false);
-  const [textureOpen, setTextureOpen]               = useState(false);
-  const [balanceOpen, setBalanceOpen]               = useState(false);
-  const [finishOpen, setFinishOpen]                 = useState(false);
+  // Structure (now Palate) states
+  const [sweetness, setSweetness] = useState(entry?.sweetness ?? '');
+  const [sweetnessOpen, setSweetnessOpen] = useState(false);
 
-  // Conclusion
+  const [acidity, setAcidity] = useState(entry?.acidity ?? '');
+  const [acidityOpen, setAcidityOpen] = useState(false);
+
+  const [tannin, setTannin] = useState(entry?.tannin ?? '');
+  const [tanninOpen, setTanninOpen] = useState(false);
+
+  const [alcoholLevel, setAlcoholLevel] = useState(entry?.alcoholLevel ?? '');
+  const [alcoholLevelOpen, setAlcoholLevelOpen] = useState(false);
+
+  const [body, setBody] = useState(entry?.body ?? '');
+  const [bodyOpen, setBodyOpen] = useState(false);
+
+  // NEW Flavor Intensity dropdown
+  const [flavorIntensity, setFlavorIntensity] = useState(entry?.flavorIntensity ?? '');
+  const [flavorIntensityOpen, setFlavorIntensityOpen] = useState(false);
+
+  // NEW Finish dropdown
+  const [finish, setFinish] = useState(entry?.finish ?? '');
+  const [finishOpen, setFinishOpen] = useState(false);
+
+  // Conclusion states
   const [qualityLevel, setQualityLevel] = useState(entry?.qualityLevel ?? '');
-  const [readiness, setReadiness]       = useState(entry?.readiness ?? '');
-  const [agePotential, setAgePotential] = useState(entry?.agePotential ?? '');
-  const [grapeGuess, setGrapeGuess]     = useState(entry?.grapeGuess ?? '');
-  const [originGuess, setOriginGuess]   = useState(entry?.originGuess ?? '');
-
   const [qualityLevelOpen, setQualityLevelOpen] = useState(false);
-  const [readinessOpen, setReadinessOpen]       = useState(false);
-  const [agePotentialOpen, setAgePotentialOpen] = useState(false);
-  // -- END state code
 
-  // Dropdown renderer
+  const [readiness, setReadiness] = useState(entry?.readiness ?? '');
+  const [readinessOpen, setReadinessOpen] = useState(false);
+
+  const [agePotential, setAgePotential] = useState(entry?.agePotential ?? '');
+  const [agePotentialOpen, setAgePotentialOpen] = useState(false);
+
+  const [grapeGuess, setGrapeGuess] = useState(entry?.grapeGuess ?? '');
+  const [originGuess, setOriginGuess] = useState(entry?.originGuess ?? '');
+
+  // Aroma chips data grouped by category
+  const primaryAromas = [
+    'Cherry', 'Strawberry', 'Raspberry', 'Cranberry', 'Pomegranate',
+    'Blackberry', 'Blackcurrant', 'Plum', 'Blueberry', 'Black Cherry',
+    'Peach', 'Apricot', 'Nectarine',
+    'Lemon', 'Lime', 'Grapefruit', 'Orange Peel',
+    'Pineapple', 'Mango', 'Passionfruit', 'Banana',
+    'Raisin', 'Fig', 'Prune',
+    'Rose', 'Violet', 'Lavender', 'Elderflower', 'Orange Blossom', 'Honeysuckle', 'Jasmine',
+    'Grass', 'Green Bell Pepper', 'Eucalyptus', 'Mint', 'Thyme', 'Sage', 'Dill', 'Fennel', 'Bay Leaf',
+    'Black Pepper', 'White Pepper', 'Clove', 'Cinnamon', 'Nutmeg', 'Anise'
+  ];
+
+  const secondaryAromas = [
+    'Bread Dough', 'Brioche', 'Yeast', 'Biscuit', 'Cream', 'Butter',
+    'Vanilla', 'Toast', 'Smoke', 'Cedar', 'Coconut', 'Cloves', 'Dill', 'Mocha', 'Caramel',
+    'Buttery', 'Creamy', 'Buttery Popcorn',
+    'Almond', 'Hazelnut', 'Parmesan', 'Spicy Oak'
+  ];
+
+  const tertiaryAromas = [
+    'Walnut', 'Almond', 'Caramel', 'Toffee', 'Dried Fig', 'Honey',
+    'Leather', 'Tobacco', 'Cigar Box', 'Forest Floor', 'Mushroom', 'Truffle', 'Wet Leaves', 'Moss',
+    'Cedar', 'Pencil Shavings', 'Smoke', 'Clove', 'Cinnamon',
+    'Tobacco', 'Graphite', 'Balsam', 'Medicinal', 'Iodine', 'Mineral', 'Petrol'
+  ];
+
+  // Helper to toggle aroma selection in array
+  const toggleAroma = (aroma: string, selectedList: string[], setSelectedList: (list: string[]) => void) => {
+    if (selectedList.includes(aroma)) {
+      setSelectedList(selectedList.filter((a) => a !== aroma));
+    } else {
+      setSelectedList([...selectedList, aroma]);
+    }
+  };
+
+  // State arrays for selected aromas
+  const [selectedPrimaryAromas, setSelectedPrimaryAromas] = useState<string[]>(entry?.primaryAroma ? entry.primaryAroma.split(', ') : []);
+  const [selectedSecondaryAromas, setSelectedSecondaryAromas] = useState<string[]>(entry?.secondaryAroma ? entry.secondaryAroma.split(', ') : []);
+  const [selectedTertiaryAromas, setSelectedTertiaryAromas] = useState<string[]>(entry?.tertiaryAroma ? entry.tertiaryAroma.split(', ') : []);
+
+  // Save selected aromas back as comma strings
+  const primaryAroma = selectedPrimaryAromas.join(', ');
+  const secondaryAroma = selectedSecondaryAromas.join(', ');
+  const tertiaryAroma = selectedTertiaryAromas.join(', ');
+
+  // Dropdown component reused for other dropdowns
   const dropdown = (
     label: string,
     open: boolean,
@@ -136,11 +215,11 @@ export default function WineJournalScreen() {
         dropDownDirection="BOTTOM"
         style={{
           marginBottom: open ? 220 : 20,
-          borderColor: '#D3C4B0',
-          backgroundColor: '#F6F4ED',
+          borderColor: '#404040', // Medium gray border
+          backgroundColor: '#2A2A2A', // Dark background
         }}
-        textStyle={{ fontSize: 15, color: '#5E5C49' }}
-        dropDownContainerStyle={{ borderColor: '#D3C4B0', backgroundColor: '#F2E9DF' }}
+        textStyle={{ fontSize: 15, color: '#E0E0E0' }} // Light gray text
+        dropDownContainerStyle={{ borderColor: '#404040', backgroundColor: '#2A2A2A' }} // Medium gray border
       />
     </View>
   );
@@ -155,32 +234,67 @@ export default function WineJournalScreen() {
     if (!res.canceled && res.assets?.length) setPhotoUrl(res.assets[0].uri);
   };
 
+  // *** Updated saveToServer with logging ***
   const saveToServer = async (): Promise<EntryType | null> => {
     const data: EntryType = {
       userEmail,
-      wineName, vintage, region, producer, varietals, price,
-      alcoholPercent, servingTemp, dateTasted, whereWithWhom, rating, photoUrl,
-      clarity, brightness, colorIntensity, hueRed, hueWhite, viscosity,
-      aromaIntensity, primaryAroma, secondaryAroma, tertiaryAroma,
-      fruitCharacter, nonFruitNotes,
-      sweetness, acidity, tannin, alcoholLevel, body,
-      texture, balance, finish,
-      qualityLevel, readiness, agePotential, grapeGuess, originGuess,
+      producer,
+      wineName,
+      varietals,
+      subregion,
+      region,
+      country,
+      vintage,
+      dateTasted,             // <-- NEW added here
+      photoUrl,
+      clarity,
+      brightness,
+      colorIntensity,
+      hueRed,
+      hueWhite,
+      hueRose,
+      viscosity,
+      aromaIntensity,
+      primaryAroma,
+      secondaryAroma,
+      tertiaryAroma,
+      condition,
+      sweetness,
+      acidity,
+      tannin,
+      alcoholLevel,
+      body,
+      flavorIntensity,
+      finish,
+      qualityLevel,
+      readiness,
+      agePotential,
+      grapeGuess,
+      originGuess,
     };
+
+    console.log('Saving entry data:', data);
+
     try {
-      const res  = await fetch(URL, {
+      const res = await fetch(URL, {
         method: METHOD,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const json = await res.json();
+
+      const text = await res.text();
+      console.log('Response status:', res.status);
+      console.log('Response text:', text);
+
+      const json = JSON.parse(text);
+
       if (!res.ok) {
         Alert.alert('Error', json.error || 'Failed to save');
         return null;
       }
       return json as EntryType;
     } catch (err) {
-      console.error(err);
+      console.error('Network error:', err);
       Alert.alert('Error', 'Network issue');
       return null;
     }
@@ -203,139 +317,258 @@ export default function WineJournalScreen() {
     <View style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.title}>
-            {isEdit ? '✏️ Edit Entry' : '🍇 New Wine Journal'}
-          </Text>
-          {/* quick inputs */}
-          {([
-            ['Wine Name', wineName, setWineName],
-            ['Vintage', vintage, setVintage],
-            ['Region / Country', region, setRegion],
-            ['Producer', producer, setProducer],
-            ['Varietal(s)', varietals, setVarietals],
-            ['Price / Value', price, setPrice],
-            ['Alcohol %', alcoholPercent, setAlcoholPercent],
-            ['Serving Temperature', servingTemp, setServingTemp],
-            ['Date Tasted', dateTasted, setDateTasted],
-            ['Where Tasted / With Whom', whereWithWhom, setWhereWithWhom],
-            ['Rating (1–5)', rating, setRating],
-          ] as [string, string, StrSetter][]).map(([ph, val, setter], i) => (
-            <TextInput
-              key={i}
-              style={styles.input}
-              placeholder={ph}
-              value={val}
-              onChangeText={setter}
-              placeholderTextColor="#A9B09F"
-            />
-          ))}
+          <Text style={styles.title}>{isEdit ? '✏️ Edit Entry' : '🍇 New Wine Journal'}</Text>
 
-          {/* Collapsible sections */}
-          <TouchableOpacity onPress={() => setVisualCollapsed((c) => !c)}>
-            <Text style={styles.section}>
-              🟥 Visual {visualCollapsed ? '▼' : '▲'}
+          {/* Show Today's Date */}
+          <View style={{ marginBottom: 14, alignItems: 'center' }}>
+            <Text style={{ fontSize: 17, fontWeight: '600', color: '#B8B8B8', letterSpacing: 0.2 }}>
+              {`Today: ${getTodayDate()}`}
             </Text>
+          </View>
+
+          {/* Collapsible Wine Information */}
+          <TouchableOpacity onPress={() => setWineInfoCollapsed((c) => !c)}>
+            <Text style={styles.sectionTitle}>🍷 Wine Information {wineInfoCollapsed ? '▼' : '▲'}</Text>
+          </TouchableOpacity>
+          {!wineInfoCollapsed && (
+            <View>
+              <TextInput
+                style={styles.input}
+                placeholder="Producer"
+                value={producer}
+                onChangeText={setProducer}
+                placeholderTextColor="#B8B8B8"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Wine Name / Classification"
+                value={wineName}
+                onChangeText={setWineName}
+                placeholderTextColor="#B8B8B8"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Varietal(s)"
+                value={varietals}
+                onChangeText={setVarietals}
+                placeholderTextColor="#B8B8B8"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Subregion"
+                value={subregion}
+                onChangeText={setSubregion}
+                placeholderTextColor="#B8B8B8"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Region"
+                value={region}
+                onChangeText={setRegion}
+                placeholderTextColor="#B8B8B8"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Country"
+                value={country}
+                onChangeText={setCountry}
+                placeholderTextColor="#B8B8B8"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Vintage"
+                value={vintage}
+                onChangeText={setVintage}
+                placeholderTextColor="#B8B8B8"
+              />
+              {/* New Date Tasted input */}
+              <TextInput
+                style={styles.input}
+                placeholder="Date Tasted (YYYY-MM-DD)"
+                value={dateTasted}
+                onChangeText={setDateTasted}
+                placeholderTextColor="#B8B8B8"
+              />
+            </View>
+          )}
+
+          {/* Visual Section */}
+          <TouchableOpacity onPress={() => setVisualCollapsed((c) => !c)}>
+            <Text style={styles.sectionTitle}>🟥 Visual {visualCollapsed ? '▼' : '▲'}</Text>
           </TouchableOpacity>
           {!visualCollapsed && (
             <View>
-              {dropdown('Clarity', clarityOpen, setClarityOpen, clarity, setClarity, [
-                'Clear', 'Slight Haze', 'Murky',
+              {dropdown('Clarity', clarityOpen, setClarityOpen, clarity, setClarity, ['Clear', 'Slight Haze', 'Murky'])}
+              {dropdown(
+                'Brightness',
+                brightnessOpen,
+                setBrightnessOpen,
+                brightness,
+                setBrightness,
+                ['Dull', 'Bright', 'Day Bright', 'Star Bright', 'Brilliant']
+              )}
+              {dropdown('Color Intensity', colorIntensityOpen, setColorIntensityOpen, colorIntensity, setColorIntensity, [
+                'Pale',
+                'Medium',
+                'Deep',
               ])}
-              {dropdown('Brightness', brightnessOpen, setBrightnessOpen, brightness, setBrightness,
-                ['Dull', 'Bright', 'Day Bright', 'Star Bright', 'Brilliant'])}
-              {dropdown('Color Intensity', colorIntensityOpen, setColorIntensityOpen, colorIntensity, setColorIntensity,
-                ['Low', 'Medium-Minus', 'Medium', 'Medium-Plus', 'High'])}
-              {dropdown('Hue (Red)', hueRedOpen, setHueRedOpen, hueRed, setHueRed,
-                ['Garnet', 'Ruby', 'Purple'])}
-              {dropdown('Hue (White)', hueWhiteOpen, setHueWhiteOpen, hueWhite, setHueWhite,
-                ['Straw', 'Yellow', 'Gold'])}
-              {dropdown('Viscosity', viscosityOpen, setViscosityOpen, viscosity, setViscosity,
-                ['Low', 'Medium', 'High'])}
+              {dropdown('Hue (Red)', hueRedOpen, setHueRedOpen, hueRed, setHueRed, ['Purple', 'Garnet', 'Ruby', 'Tawny', 'Brown'])}
+              {dropdown(
+                'Hue (White)',
+                hueWhiteOpen,
+                setHueWhiteOpen,
+                hueWhite,
+                setHueWhite,
+                ['Straw', 'Yellow', 'Gold', 'Amber', 'Brown']
+              )}
+              {dropdown('Hue (Rose)', hueRoseOpen, setHueRoseOpen, hueRose, setHueRose, ['Pink', 'Salmon', 'Copper'])}
+              {dropdown('Viscosity', viscosityOpen, setViscosityOpen, viscosity, setViscosity, ['Low', 'Medium', 'High'])}
             </View>
           )}
 
+          {/* Nose (Aroma & Bouquet) Section */}
           <TouchableOpacity onPress={() => setNoseCollapsed((c) => !c)}>
-            <Text style={styles.section}>
-              🟨 Nose & Palate {noseCollapsed ? '▼' : '▲'}
-            </Text>
+            <Text style={styles.sectionTitle}>🟨 Nose (Aroma & Bouquet) {noseCollapsed ? '▼' : '▲'}</Text>
           </TouchableOpacity>
           {!noseCollapsed && (
             <View>
-              {dropdown('Aroma Intensity', aromaIntensityOpen, setAromaIntensityOpen, aromaIntensity, setAromaIntensity,
-                ['Low', 'Medium', 'High'])}
-              {dropdown('Primary Aroma', primaryAromaOpen, setPrimaryAromaOpen, primaryAroma, setPrimaryAroma,
-                ['Fruit', 'Floral', 'Herbal', 'Spice'])}
-              {dropdown('Secondary Aroma', secondaryAromaOpen, setSecondaryAromaOpen, secondaryAroma, setSecondaryAroma,
-                ['Yeast', 'Butter', 'Cream', 'Nutty'])}
-              {dropdown('Tertiary Aroma', tertiaryAromaOpen, setTertiaryAromaOpen, tertiaryAroma, setTertiaryAroma,
-                ['Oak', 'Vanilla', 'Tobacco', 'Leather', 'Earth'])}
-              {dropdown('Fruit Character', fruitCharacterOpen, setFruitCharacterOpen, fruitCharacter, setFruitCharacter,
-                ['Red Fruit', 'Black Fruit', 'Dried Fruit', 'Citrus', 'Tropical'])}
-              {dropdown('Non-Fruit Notes', nonFruitNotesOpen, setNonFruitNotesOpen, nonFruitNotes, setNonFruitNotes,
-                ['Mineral', 'Vegetal', 'Floral', 'Spice', 'Oak', 'Herbaceous'])}
+              {/* Aroma Intensity */}
+              {dropdown(
+                'Aroma Intensity',
+                aromaIntensityOpen,
+                setAromaIntensityOpen,
+                aromaIntensity,
+                setAromaIntensity,
+                ['Low', 'Medium', 'High']
+              )}
+
+              {/* Condition */}
+              {dropdown(
+                'Condition',
+                conditionOpen,
+                setConditionOpen,
+                condition,
+                setCondition,
+                ['Clean', 'Off', 'Corked', 'Oxidized']
+              )}
+
+              {/* Primary Aromas Chips */}
+              <Text style={styles.label}>Primary Aromas</Text>
+              <View style={styles.chipContainer}>
+                {primaryAromas.map((aroma) => (
+                  <AromaChip
+                    key={aroma}
+                    label={aroma}
+                    selected={selectedPrimaryAromas.includes(aroma)}
+                    onPress={() => toggleAroma(aroma, selectedPrimaryAromas, setSelectedPrimaryAromas)}
+                  />
+                ))}
+              </View>
+
+              {/* Secondary Aromas Chips */}
+              <Text style={styles.label}>Secondary Aromas</Text>
+              <View style={styles.chipContainer}>
+                {secondaryAromas.map((aroma) => (
+                  <AromaChip
+                    key={aroma}
+                    label={aroma}
+                    selected={selectedSecondaryAromas.includes(aroma)}
+                    onPress={() => toggleAroma(aroma, selectedSecondaryAromas, setSelectedSecondaryAromas)}
+                  />
+                ))}
+              </View>
+
+              {/* Tertiary Aromas Chips */}
+              <Text style={styles.label}>Tertiary Aromas</Text>
+              <View style={styles.chipContainer}>
+                {tertiaryAromas.map((aroma) => (
+                  <AromaChip
+                    key={aroma}
+                    label={aroma}
+                    selected={selectedTertiaryAromas.includes(aroma)}
+                    onPress={() => toggleAroma(aroma, selectedTertiaryAromas, setSelectedTertiaryAromas)}
+                  />
+                ))}
+              </View>
             </View>
           )}
 
+          {/* Palate (Taste & Texture) Section */}
           <TouchableOpacity onPress={() => setStructureCollapsed((c) => !c)}>
-            <Text style={styles.section}>
-              🟩 Structure {structureCollapsed ? '▼' : '▲'}
-            </Text>
+            <Text style={styles.sectionTitle}>🟩 Palate (Taste & Texture) {structureCollapsed ? '▼' : '▲'}</Text>
           </TouchableOpacity>
           {!structureCollapsed && (
             <View>
-              {dropdown('Sweetness', sweetnessOpen, setSweetnessOpen, sweetness, setSweetness,
-                ['Dry', 'Off-Dry', 'Medium', 'Sweet'])}
-              {dropdown('Acidity', acidityOpen, setAcidityOpen, acidity, setAcidity,
-                ['Low', 'Medium', 'High'])}
-              {dropdown('Tannin', tanninOpen, setTanninOpen, tannin, setTannin,
-                ['Low', 'Medium', 'High'])}
-              {dropdown('Alcohol Level', alcoholLevelOpen, setAlcoholLevelOpen, alcoholLevel, setAlcoholLevel,
-                ['Low', 'Medium', 'High'])}
-              {dropdown('Body', bodyOpen, setBodyOpen, body, setBody,
-                ['Light', 'Medium', 'Full'])}
-              {dropdown('Texture', textureOpen, setTextureOpen, texture, setTexture,
-                ['Silky', 'Velvety', 'Rough', 'Astringent'])}
-              {dropdown('Balance', balanceOpen, setBalanceOpen, balance, setBalance,
-                ['Harmonious', 'Unbalanced'])}
-              {dropdown('Finish', finishOpen, setFinishOpen, finish, setFinish,
-                ['Short', 'Medium', 'Long'])}
+              {dropdown('Body', bodyOpen, setBodyOpen, body, setBody, ['Low', 'Med -', 'Med', 'Med +', 'High'])}
+              {dropdown('Tannin', tanninOpen, setTanninOpen, tannin, setTannin, ['Low', 'Med -', 'Med', 'Med +', 'High'])}
+              {dropdown('Acidity', acidityOpen, setAcidityOpen, acidity, setAcidity, ['Low', 'Med -', 'Med', 'Med +', 'High'])}
+              {dropdown('Alcohol Level', alcoholLevelOpen, setAlcoholLevelOpen, alcoholLevel, setAlcoholLevel, [
+                'Low',
+                'Med -',
+                'Med',
+                'Med +',
+                'High',
+              ])}
+              {dropdown('Sweetness', sweetnessOpen, setSweetnessOpen, sweetness, setSweetness, [
+                'Dry',
+                'Off-Dry',
+                'Medium Sweet',
+                'Sweet',
+              ])}
+              {dropdown('Flavor Intensity', flavorIntensityOpen, setFlavorIntensityOpen, flavorIntensity, setFlavorIntensity, [
+                'Light',
+                'Medium',
+                'Pronounced',
+              ])}
+              {dropdown('Finish', finishOpen, setFinishOpen, finish, setFinish, ['Short', 'Medium', 'Long'])}
             </View>
           )}
 
+          {/* Conclusion Section */}
           <TouchableOpacity onPress={() => setConclusionCollapsed((c) => !c)}>
-            <Text style={styles.section}>
-              🟦 Conclusion {conclusionCollapsed ? '▼' : '▲'}
-            </Text>
+            <Text style={styles.sectionTitle}>🟦 Conclusion {conclusionCollapsed ? '▼' : '▲'}</Text>
           </TouchableOpacity>
           {!conclusionCollapsed && (
             <View>
-              {dropdown('Quality Level', qualityLevelOpen, setQualityLevelOpen, qualityLevel, setQualityLevel,
-                ['Poor', 'Acceptable', 'Good', 'Very Good', 'Outstanding'])}
-              {dropdown('Readiness', readinessOpen, setReadinessOpen, readiness, setReadiness,
-                ['Too Young', 'Can Drink Now', 'Drink Now', 'Too Old'])}
-              {dropdown('Age Potential', agePotentialOpen, setAgePotentialOpen, agePotential, setAgePotential,
-                ['Low', 'Medium', 'High'])}
+              {dropdown(
+                'Quality Level',
+                qualityLevelOpen,
+                setQualityLevelOpen,
+                qualityLevel,
+                setQualityLevel,
+                ['Poor', 'Acceptable', 'Good', 'Very Good', 'Outstanding']
+              )}
+              {dropdown('Readiness', readinessOpen, setReadinessOpen, readiness, setReadiness, [
+                'Too Young',
+                'Can Drink Now',
+                'Drink Now',
+                'Too Old',
+              ])}
+              {dropdown('Age Potential', agePotentialOpen, setAgePotentialOpen, agePotential, setAgePotential, [
+                'Low',
+                'Medium',
+                'High',
+              ])}
               <TextInput
                 style={styles.input}
                 placeholder="Grape Guess (optional)"
                 value={grapeGuess}
                 onChangeText={setGrapeGuess}
-                placeholderTextColor="#A9B09F"
+                placeholderTextColor="#B8B8B8"
               />
               <TextInput
                 style={styles.input}
                 placeholder="Origin Guess (optional)"
                 value={originGuess}
                 onChangeText={setOriginGuess}
-                placeholderTextColor="#A9B09F"
+                placeholderTextColor="#B8B8B8"
               />
             </View>
           )}
 
+          {/* Upload Bottle Photo */}
           <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
-            <Text style={{ color: '#A68262', fontWeight: '600' }}>
-              📸 Upload Bottle Photo
-            </Text>
+            <Text style={{ color: '#B8B8B8', fontWeight: '600' }}>📸 Upload Bottle Photo</Text>
           </TouchableOpacity>
           {photoUrl ? (
             <Image
@@ -344,6 +577,7 @@ export default function WineJournalScreen() {
             />
           ) : null}
 
+          {/* Save & Blind Tasting Buttons */}
           <Pressable style={styles.buttonPrimary} onPress={handleSave}>
             <Text style={styles.buttonText}>✅ Save Entry</Text>
           </Pressable>
@@ -359,7 +593,7 @@ export default function WineJournalScreen() {
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
-    backgroundColor: '#F7F5EF', // sand/linen
+    backgroundColor: '#0A0A0A', // Very dark charcoal background
   },
   container: {
     flexGrow: 1,
@@ -370,93 +604,162 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    maxWidth: 460,
-    backgroundColor: '#FAF8F4',
-    borderRadius: 22,
-    padding: 24,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
-    marginVertical: 20,
+    maxWidth: 430,
+    backgroundColor: '#1E1E1E', // Dark slate
+    borderRadius: 24,
+    padding: 26,
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A', // Subtle border
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#8B7C5A', // olive-brown
-    textAlign: 'center',
-    marginBottom: 14,
-    letterSpacing: 0.5,
-  },
-  section: {
-    fontSize: 19,
+    fontSize: 26,
     fontWeight: '700',
-    marginTop: 22,
-    marginBottom: 10,
-    color: '#B1624E', // terracotta
-    textShadowColor: '#EFE6DC',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    color: '#E0E0E0', // Light gray text
+    textAlign: 'center',
+    marginBottom: 18,
+    letterSpacing: 0.5,
+    fontFamily: 'serif',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#B8B8B8', // Medium gray
+    marginBottom: 12,
+    letterSpacing: 0.3,
+    fontFamily: 'serif',
   },
   label: {
     fontSize: 15,
     fontWeight: '600',
     marginTop: 10,
     marginBottom: 4,
-    color: '#5E5C49', // dark taupe
+    color: '#B8B8B8', // Medium gray
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#D3C4B0',
-    borderRadius: 12,
-    padding: 11,
+    borderWidth: 1.5,
+    borderColor: '#404040', // Medium gray border
+    borderRadius: 14,
+    padding: 13,
+    marginBottom: 10,
     fontSize: 16,
-    backgroundColor: '#F6F4ED',
-    marginBottom: 7,
-    color: '#5E5C49',
+    backgroundColor: '#2A2A2A', // Dark input background
+    color: '#E0E0E0', // Light gray text
+    shadowColor: '#000000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  picker: {
+    borderWidth: 1.5,
+    borderColor: '#404040', // Medium gray border
+    borderRadius: 14,
+    marginBottom: 10,
+    backgroundColor: '#2A2A2A', // Dark background
+    color: '#E0E0E0', // Light gray text
   },
   uploadBtn: {
     marginVertical: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#D3C4B0',
+    borderColor: '#404040', // Medium gray border
     borderRadius: 13,
     alignItems: 'center',
-    backgroundColor: '#F6F4ED',
+    backgroundColor: '#2A2A2A', // Dark input background
     elevation: 1,
-    shadowColor: '#D3C4B0',
-    shadowOpacity: 0.06,
+    shadowColor: '#000000',
+    shadowOpacity: 0.1,
     shadowRadius: 2,
     shadowOffset: { width: 0, height: 1 },
   },
   buttonPrimary: {
-    backgroundColor: '#8B7C5A',
+    backgroundColor: '#404040', // Medium gray
     padding: 15,
     borderRadius: 13,
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.12,
-    shadowRadius: 5,
+    marginTop: 8,
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#505050', // Lighter gray accent
   },
   buttonSecondary: {
-    backgroundColor: '#B1624E',
-    padding: 14,
+    backgroundColor: '#2A2A2A', // Dark slate
+    borderWidth: 1.5,
+    borderColor: '#404040', // Medium gray border
+    padding: 15,
     borderRadius: 13,
     alignItems: 'center',
-    marginVertical: 3,
-    borderWidth: 1,
-    borderColor: '#D3C4B0',
+    marginTop: 8,
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   buttonText: {
-    color: '#FFF',
+    color: '#E0E0E0', // Light gray text
     fontWeight: '700',
-    fontSize: 17,
-    letterSpacing: 0.1,
+    fontSize: 16,
+    letterSpacing: 0.07,
+  },
+  buttons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    gap: 8,
+  },
+  button: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 13,
+    borderRadius: 11,
+    marginHorizontal: 4,
+    marginBottom: 5,
+    shadowColor: '#000000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+  },
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  chipSelected: {
+    backgroundColor: '#B8B8B8', // Medium gray
+    borderColor: '#B8B8B8', // Medium gray
+  },
+  chipUnselected: {
+    backgroundColor: '#2A2A2A', // Dark input background
+    borderColor: '#404040', // Medium gray border
+  },
+  chipTextSelected: {
+    color: '#1E1E1E', // Dark slate
+    fontWeight: '600',
+  },
+  chipTextUnselected: {
+    color: '#B8B8B8', // Medium gray
+    fontWeight: '600',
   },
 });
-

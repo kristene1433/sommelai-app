@@ -28,6 +28,7 @@ router.post('/api/create-checkout-session', async (req, res) => {
       payment_method_types: ['card'],
       customer_email: email,
       line_items: [{
+        
         price: 'price_1R2H24G3CmMC7BS0Z0cst8Jy', // Your Stripe Price ID
         quantity: 1,
       }],
@@ -43,5 +44,3 @@ router.post('/api/create-checkout-session', async (req, res) => {
 });
 
 module.exports = router;
-
-

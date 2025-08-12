@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, TextInput, Text, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform, ActivityIndicator,
-  Pressable, Linking, Alert, Image,
+  Pressable, Linking, Alert, Image, Switch, Keyboard,
 } from 'react-native';
-// import { LinearGradient } from 'expo-linear-gradient'; // Uncomment if using gradient background!
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { OPENAI_API_KEY } from '@env';
@@ -13,8 +12,8 @@ import { Audio, AVPlaybackStatusSuccess } from 'expo-av';
 import { Buffer } from 'buffer';
 global.Buffer = Buffer;
 
-type Props  = { userPlan: 'free' | 'paid'; userEmail: string };
-type Prefs  = { wineTypes: string[]; flavorProfiles: string[] };
+type Props = { userPlan: 'paid'; userEmail: string };
+type Prefs = { wineTypes: string[]; flavorProfiles: string[] };
 type LocalItem = {
   name: string; price: string; store: string;
   address?: string; url?: string;
@@ -22,57 +21,66 @@ type LocalItem = {
 
 const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
+function cleanAssistantResponse(raw: string) {
+  return raw
+    .replace(/(\*{1,2})(.*?)\1/g, '$2')
+    .replace(/^\d+\.\s*/gm, '')
+    .replace(/^- /gm, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+}
+
 export default function WineChat({ userPlan, userEmail }: Props) {
-  const [question,  setQuestion]  = useState('');
-  const [response,  setResponse]  = useState('');
-  const [localRes,  setLocalRes]  = useState<LocalItem[]>([]);
-  const [prefs,     setPrefs]     = useState<Prefs | null>(null);
-  const [loading,   setLoading]   = useState(false);
-
-  const [sound,       setSound]       = useState<Audio.Sound | null>(null);
-  const [isSpeaking,  setIsSpeaking]  = useState(false);
-  const [dailyCount,  setDailyCount]  = useState(0);
-
+  const [question, setQuestion] = useState('');
+  const [response, setResponse] = useState('');
+  const [localRes, setLocalRes] = useState<LocalItem[]>([]);
+  const [prefs, setPrefs] = useState<Prefs | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [chatHistory, setChatHistory] = useState<
-    { role: 'user' | 'assistant'; content: string }[]
+    { role: 'user' | 'assistant'; content: string; type?: 'vision' | 'text' }[]
   >([]);
-
-  // For Vision/photo
   const [photoAsset, setPhotoAsset] = useState<any>(null);
-
   const scrollRef = useRef<ScrollView | null>(null);
+  const [usePreferences, setUsePreferences] = useState(true);
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [chatHistory]);
 
-  // --- Preferences ---
   const loadPrefs = useCallback(async () => {
-    if (userPlan !== 'paid') { setPrefs(null); return; }
+    if (userPlan !== 'paid') {
+      setPrefs(null);
+      return;
+    }
     try {
       const r = await fetch(`${BASE_URL}/api/preferences/${userEmail}`);
       if (r.ok) setPrefs(await r.json());
-    } catch { /* silent */ }
+    } catch {}
   }, [userPlan, userEmail]);
-  useEffect(() => { loadPrefs(); }, [loadPrefs]);
-  useFocusEffect(useCallback(() => { loadPrefs(); }, [loadPrefs]));
 
-  // --- Local store lookup ---
+  useEffect(() => {
+    loadPrefs();
+  }, [loadPrefs]);
+
+  useFocusEffect(useCallback(() => {
+    loadPrefs();
+  }, [loadPrefs]));
+
   const fetchLocalWine = async (q: string) => {
     try {
       const zipRes = await fetch(`${BASE_URL}/api/zip/${userEmail}`);
       const { zip } = await zipRes.json();
       if (!zip) {
         setResponse('No ZIP on file. Please add it in Profile.');
-        // 👇 Add to chatHistory for full context:
         setChatHistory(prev => [
           ...prev,
-          { role: 'user', content: q },
-          { role: 'assistant', content: 'No ZIP on file. Please add it in Profile.' },
+          { role: 'user', content: q, type: 'text' },
+          { role: 'assistant', content: 'No ZIP on file. Please add it in Profile.', type: 'text' },
         ]);
         return;
       }
-  
       const apiRes = await fetch(`${BASE_URL}/api/searchWineLocal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,131 +90,112 @@ export default function WineChat({ userPlan, userEmail }: Props) {
         setResponse('Local search failed.');
         setChatHistory(prev => [
           ...prev,
-          { role: 'user', content: q },
-          { role: 'assistant', content: 'Local search failed.' },
+          { role: 'user', content: q, type: 'text' },
+          { role: 'assistant', content: 'Local search failed.', type: 'text' },
         ]);
         return;
       }
-  
-      let { results } = await apiRes.json() as { results: LocalItem[] };
-  
+      let { results } = (await apiRes.json()) as { results: LocalItem[] };
       if (prefs?.wineTypes.length) {
         const wanted = prefs.wineTypes.map(t => t.toLowerCase());
         const filtered = results.filter(r =>
-          wanted.some(w => r.name.toLowerCase().includes(w)));
+          wanted.some(w => r.name.toLowerCase().includes(w))
+        );
         if (filtered.length) results = filtered;
       }
       if (!results.length) {
         setResponse('No local listings found.');
         setChatHistory(prev => [
           ...prev,
-          { role: 'user', content: q },
-          { role: 'assistant', content: 'No local listings found.' },
+          { role: 'user', content: q, type: 'text' },
+          { role: 'assistant', content: 'No local listings found.', type: 'text' },
         ]);
         return;
       }
-  
       setLocalRes(results.slice(0, 3));
-  
-      // Create a short summary for assistant reply:
-      const summary =
-        results
-          .slice(0, 3)
-          .map(
-            (r, idx) =>
-              `${idx + 1}. ${r.name} ($${r.price}) at ${r.store}${r.address ? ', ' + r.address : ''}`
-          )
-          .join('\n');
-  
       setChatHistory(prev => [
         ...prev,
-        { role: 'user', content: q },
-        {
-          role: 'assistant',
-          content:
-            `Here are local listings for "${q}":\n${summary}`,
-        },
+        { role: 'user', content: q, type: 'text' },
+        // Removed blank assistant message to prevent UI confusion
       ]);
     } catch {
       setResponse('Sorry, I could not retrieve local availability.');
       setChatHistory(prev => [
         ...prev,
-        { role: 'user', content: q },
-        { role: 'assistant', content: 'Sorry, I could not retrieve local availability.' },
+        { role: 'user', content: q, type: 'text' },
+        { role: 'assistant', content: 'Sorry, I could not retrieve local availability.', type: 'text' },
       ]);
     }
   };
-  
 
-  // --- Text-only Ask ---
   const askSommelier = async () => {
     if (!question.trim()) return;
+    Keyboard.dismiss();
     setLocalRes([]);
     setQuestion('');
 
-    if (userPlan === 'free' && dailyCount >= 5) {
-      setResponse('⚠️ Free plan limit reached. Upgrade to ask more questions.');
-      return;
-    }
-
-    const wantsLocal = /(nearby|near me|local|in my area|where can i (find|buy|get|purchase|order)|where to (buy|get|purchase|order)|buy .* near|purchase .* near|get .* near|shop .* near)/i
-      .test(question);
+    const wantsLocal = /(nearby|near me|local|in my area|where can i (find|buy|get|purchase|order)|where to (buy|get|purchase|order)|buy .* near|purchase .* near|get .* near|shop .* near)/i.test(
+      question.trim().toLowerCase()
+    );
 
     if (wantsLocal) {
       setLoading(true);
       await fetchLocalWine(question);
-      if (userPlan === 'free') setDailyCount(c => c + 1);
       setLoading(false);
       return;
     }
 
-    const systemPrompt =
-      'You are a master sommelier and friendly conversationalist. Only answer wine-related questions.' +
-      '\n\n' +
-      (prefs && (prefs.wineTypes.length || prefs.flavorProfiles.length)
-        ? `USER PREFERENCES:\n- Wine Types: ${prefs.wineTypes.join(', ') || 'any'}\n- Flavor Profiles: ${prefs.flavorProfiles.join(', ') || 'any'}\n`
-        : 'USER PREFERENCES: None provided.\n') +
-      '\nInstructions:\n' +
-      '- Recommend 2–3 specific varietals when asked.\n' +
-      '- Add **Perfect Pairing** section.\n' +
-      '- End with a question to keep chat going.\n' +
-      '- Be knowledgeable, approachable, charming.';
-
     const messages = [
-      { role: 'system', content: systemPrompt },
-      ...chatHistory,
+      {
+        role: 'system',
+        content:
+          'You are a master sommelier and friendly conversationalist. ' +
+          'The conversation is about a specific wine identified earlier. ' +
+          'For every follow-up question, answer as if referring to that wine unless the user explicitly changes topic. ' +
+          (usePreferences && prefs
+            ? `USER PREFERENCES:\n- Wine Types: ${prefs.wineTypes.join(', ') || 'any'}\n- Flavor Profiles: ${prefs.flavorProfiles.join(', ') || 'any'}\n`
+            : 'USER PREFERENCES: None provided.\n') +
+          '\nInstructions:\n' +
+          '- Always answer about the known wine unless told otherwise.\n' +
+          '- Recommend 2–3 varietals when asked.\n' +
+          '- Add Perfect Pairing section (no bullets, no numbers, no markdown—just conversational style).\n' +
+          '- End with a question to keep chat going.\n' +
+          '- Be knowledgeable, approachable, charming. No asterisks, no markdown, no numbered lists.',
+      },
+      ...chatHistory.map(m => ({ role: m.role, content: m.content })),
       { role: 'user', content: question },
     ];
 
-    setLoading(true); setResponse('');
+    setLoading(true);
+    setResponse('');
     try {
       const r = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${OPENAI_API_KEY?.trim()}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ model: 'gpt-4o', messages }),
+        body: JSON.stringify({ model: 'gpt-oss-20b', messages }),
       });
       const data = await r.json();
       if (data.choices?.length) {
-        const content = data.choices[0].message.content;
+        const content = cleanAssistantResponse(data.choices[0].message.content);
         setResponse(content);
         setChatHistory(prev => [
           ...prev,
-          { role: 'user', content: question },
-          { role: 'assistant', content },
+          { role: 'user', content: question, type: 'text' },
+          { role: 'assistant', content, type: 'text' },
         ]);
-        setQuestion(''); 
-      } else { setResponse('⚠️ No answer returned.'); }
-      if (userPlan === 'free') setDailyCount(c => c + 1);
+        setQuestion('');
+      } else {
+        setResponse('⚠️ No answer returned.');
+      }
     } catch {
       setResponse('Something went wrong.');
     }
     setLoading(false);
   };
 
-  // --- Vision (photo + question together) ---
   const pickPhoto = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -217,47 +206,46 @@ export default function WineChat({ userPlan, userEmail }: Props) {
 
   const askWithPhoto = async () => {
     if (!photoAsset && !question.trim()) {
-      Alert.alert("Add a photo and a question!");
+      Alert.alert('Add a photo and a question!');
       return;
     }
+    Keyboard.dismiss();
     setQuestion('');
 
-    const wantsLocal = /(nearby|near me|local|in my area|where can i (find|buy|get|purchase|order)|where to (buy|get|purchase|order)|buy .* near|purchase .* near|get .* near|shop .* near)/i
-      .test(question);
-
-    if (wantsLocal) {
-      setLoading(true);
-      await fetchLocalWine(question);
-      setLoading(false);
-      return;
-    }
-
-    const form = new FormData();
-    if (photoAsset) {
-      form.append('photo', {
-        uri: photoAsset.uri,
-        name: 'wine.jpg',
-        type: 'image/jpeg',
-      } as any);
-    }
-    form.append('question', question || "What can you tell me about this wine?");
+    const lastVisionAssistant = [...chatHistory]
+      .reverse()
+      .find(m => m.type === 'vision' && m.role === 'assistant');
+    const previousWineDescription = lastVisionAssistant?.content || '';
 
     setLoading(true);
     try {
+      const form = new FormData();
+      form.append('photo', {
+        uri: photoAsset.uri,
+        name: photoAsset.fileName || 'wine.jpg',
+        type: photoAsset.type || 'image/jpeg',
+      } as any);
+      form.append('question', question || 'What can you tell me about this wine?');
+
+      if (previousWineDescription) {
+        form.append('previousWineDescription', previousWineDescription);
+      }
+
       const r = await fetch(`${BASE_URL}/api/vision/somm`, {
         method: 'POST',
         body: form,
       });
       const json = await r.json();
       if (r.ok) {
-        setResponse(json.answer);
+        const clean = cleanAssistantResponse(json.answer);
+        setResponse(clean);
         setChatHistory(prev => [
           ...prev,
-          { role: 'user', content: `📸 "${question || 'What can you tell me about this wine?'}"` },
-          { role: 'assistant', content: json.answer },
+          { role: 'user', content: `📸 "${question || 'What can you tell me about this wine?'}"`, type: 'vision' },
+          { role: 'assistant', content: clean, type: 'vision' },
         ]);
-        setPhotoAsset(null); // clear photo after ask
-        setQuestion(''); // <-- CLEAR THE QUESTION INPUT HERE
+        setPhotoAsset(null);
+        setQuestion('');
       } else {
         Alert.alert('Vision error', json.error || 'Unable to analyze image');
       }
@@ -267,47 +255,38 @@ export default function WineChat({ userPlan, userEmail }: Props) {
     setLoading(false);
   };
 
-  // --- TTS ---
   const speakResponse = async (text: string) => {
     if (Platform.OS === 'web') return;
-
     try {
       setIsSpeaking(true);
-
       if (sound) {
         await sound.stopAsync();
         await sound.unloadAsync();
       }
-
+      const cleanText = cleanAssistantResponse(text);
       const r = await fetch('https://api.openai.com/v1/audio/speech', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${OPENAI_API_KEY?.trim()}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ model: 'tts-1', input: text, voice: 'nova' }),
+        body: JSON.stringify({ model: 'tts-1', input: cleanText, voice: 'nova' }),
       });
-      const buf  = await r.arrayBuffer();
-
+      const buf = await r.arrayBuffer();
       const path = FileSystem.cacheDirectory + 'sommelai.mp3';
-      await FileSystem.writeAsStringAsync(
-        path,
-        Buffer.from(buf).toString('base64'),
-        { encoding: FileSystem.EncodingType.Base64 },
-      );
-
+      await FileSystem.writeAsStringAsync(path, Buffer.from(buf).toString('base64'), {
+        encoding: FileSystem.EncodingType.Base64,
+      });
       const { sound: newSound } = await Audio.Sound.createAsync({ uri: path });
       setSound(newSound);
       await newSound.playAsync();
-
-      newSound.setOnPlaybackStatusUpdate((status) => {
+      newSound.setOnPlaybackStatusUpdate(status => {
         if (!status.isLoaded) return;
         if ((status as AVPlaybackStatusSuccess).didJustFinish) {
           setIsSpeaking(false);
         }
       });
     } catch (err) {
-      console.warn('TTS error', err);
       setIsSpeaking(false);
     }
   };
@@ -318,18 +297,19 @@ export default function WineChat({ userPlan, userEmail }: Props) {
         await sound.stopAsync();
         await sound.unloadAsync();
       }
-    } catch { /* ignore */ }
+    } catch {}
     setSound(null);
     setIsSpeaking(false);
   };
 
-  useEffect(() => () => { sound?.unloadAsync(); }, [sound]);
+  useEffect(() => {
+    return () => {
+      sound?.unloadAsync();
+    };
+  }, [sound]);
 
-  // --- Helper for safe URLs and link open (NEW) ---
   const safeUrl = (url: string) =>
-    url.startsWith('http://') || url.startsWith('https://')
-      ? url
-      : `https://${url}`;
+    url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
 
   const handleLinkPress = async (url: string) => {
     const validUrl = safeUrl(url);
@@ -349,21 +329,15 @@ export default function WineChat({ userPlan, userEmail }: Props) {
     const fallback = `https://www.wine-searcher.com/find/${encodeURIComponent(item.name)}`;
     const rawUrl = item.url || fallback;
     const displayUrl = safeUrl(rawUrl);
-
     return (
       <View style={styles.listingCard}>
-        <Text style={styles.listTitle}>{item.name} – ${item.price}</Text>
+        <Text style={styles.listTitle}>{item.name}</Text>
+        <Text style={styles.price}>${item.price}</Text>
         <Text style={styles.sub}>{item.store}</Text>
         {item.address ? <Text style={styles.sub}>{item.address}</Text> : null}
-        <Pressable
-          onPress={() => handleLinkPress(rawUrl)}
-          android_ripple={{ color: '#e0e0e0' }}
-        >
+        <Pressable onPress={() => handleLinkPress(rawUrl)} android_ripple={{ color: '#e0e0e0' }}>
           <Text
-            style={[
-              styles.sub,
-              { color: '#0066cc', textDecorationLine: 'underline', marginTop: 2 }
-            ]}
+            style={[styles.sub, { color: '#0066cc', textDecorationLine: 'underline', marginTop: 2 }]}
             numberOfLines={1}
           >
             {displayUrl}
@@ -373,17 +347,29 @@ export default function WineChat({ userPlan, userEmail }: Props) {
     );
   };
 
-  // ---- UI ----
-  // For full fade background, use LinearGradient. Here, use a soft blue for simplicity.
   return (
     <KeyboardAvoidingView
       style={styles.gradient}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <View style={styles.content}>
         <View style={styles.card}>
           <Text style={styles.header}>🍷 Ask Your AI Sommelier</Text>
-
+          {userPlan === 'paid' && (
+            <View style={styles.prefsToggleRow}>
+              <Text style={styles.prefsToggleText}>Use My Preferences</Text>
+              <Switch
+                value={usePreferences}
+                onValueChange={setUsePreferences}
+                trackColor={{ true: '#B1624E', false: '#D8C8B8' }}
+                thumbColor={usePreferences ? '#8B7C5A' : '#B8A88A'}
+              />
+            </View>
+          )}
+          {!usePreferences && userPlan === 'paid' && (
+            <Text style={styles.prefsOffNote}>Preferences are OFF. You’ll get classic sommelier answers!</Text>
+          )}
           <TextInput
             style={styles.input}
             placeholder="e.g. What wine pairs with goat cheese?"
@@ -392,110 +378,111 @@ export default function WineChat({ userPlan, userEmail }: Props) {
             placeholderTextColor="#9C8C7B"
             multiline
           />
-
-          {/* Photo preview */}
-          {photoAsset &&
+          {photoAsset && (
             <View style={{ alignItems: 'center', marginBottom: 10 }}>
               <Image source={{ uri: photoAsset.uri }} style={{ width: 120, height: 180, borderRadius: 12 }} />
               <Pressable onPress={() => setPhotoAsset(null)}>
                 <Text style={{ color: '#B1624E', marginTop: 5, fontWeight: '600' }}>Remove photo</Text>
               </Pressable>
             </View>
-          }
+          )}
 
           <View style={styles.buttonRow}>
             <Pressable style={styles.buttonSecondary} onPress={pickPhoto} disabled={loading}>
               <Text style={styles.buttonText}>📸 Upload Photo</Text>
             </Pressable>
             <Pressable
-              style={[styles.buttonPrimary, { opacity: loading || (!photoAsset && !question.trim()) ? 0.5 : 1 }]}
-              onPress={askWithPhoto}
-              disabled={loading || (!photoAsset && !question.trim())}
+              style={[
+                styles.buttonPrimary,
+                {
+                  opacity: loading || (!question.trim() && !photoAsset) ? 0.5 : 1,
+                },
+              ]}
+              onPress={photoAsset ? askWithPhoto : askSommelier}
+              disabled={loading || (!question.trim() && !photoAsset)}
             >
-              <Text style={styles.buttonText}>{loading ? "Thinking…" : "Ask with Photo"}</Text>
+              <Text style={styles.buttonText}>{loading ? 'Thinking…' : 'Ask'}</Text>
             </Pressable>
           </View>
-          <Pressable
-            style={[styles.buttonPrimary, { opacity: loading ? 0.5 : 1 }]}
-            onPress={askSommelier}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>{loading ? "Thinking…" : "Ask (Text Only)"}</Text>
-          </Pressable>
 
-          {loading && (
-            <ActivityIndicator size="large" color="#A68262" style={{ marginTop: 22 }} />
-          )}
+          {loading && <ActivityIndicator size="large" color="#A68262" style={{ marginTop: 22 }} />}
 
-          {/* Local listings or chat */}
           {!!localRes.length ? (
-            <View style={styles.responseBox}>
-              {localRes.map((it, idx) => <Listing key={idx} item={it} />)}
-            </View>
+            <View style={styles.responseBox}>{localRes.map((it, idx) => <Listing key={idx} item={it} />)}</View>
           ) : (
-            <ScrollView ref={scrollRef} style={styles.chatBox}>
+            <ScrollView
+              ref={scrollRef}
+              style={styles.chatBox}
+              nestedScrollEnabled={true}
+              keyboardShouldPersistTaps="handled"
+            >
               {chatHistory.map((msg, idx) => (
                 <View
                   key={idx}
-                  style={[
-                    styles.chatBubble,
-                    msg.role === 'user' ? styles.userBubble : styles.assistantBubble,
-                  ]}
+                  style={[styles.chatBubble, msg.role === 'user' ? styles.userBubble : styles.assistantBubble]}
                 >
-                  <Text style={styles.chatText}>{msg.content}</Text>
+                  {msg.role === 'assistant'
+                    ? cleanAssistantResponse(msg.content)
+                        .split('\n')
+                        .filter(line => !!line.trim())
+                        .map((line, i) =>
+                          line.trim().toLowerCase().startsWith('perfect pairing') ? (
+                            <View key={i} style={styles.pairingBubble}>
+                              <Text style={styles.pairingText}>{line.trim()}</Text>
+                            </View>
+                          ) : (
+                            <View key={i} style={styles.assistantItemBubble}>
+                              <Text style={styles.chatText}>{line.trim()}</Text>
+                            </View>
+                          )
+                        )
+                    : (
+                      <Text style={styles.chatText}>{msg.content}</Text>
+                    )}
                 </View>
               ))}
             </ScrollView>
           )}
 
-          {/* TTS buttons */}
           {Platform.OS !== 'web' && !!response && !localRes.length && (
-            <View style={{ marginTop: 10 }}>
+            <View style={styles.speakAndResetRow}>
               {!isSpeaking ? (
-                <Pressable style={styles.buttonSecondary} onPress={() => speakResponse(response)}>
-                  <Text style={styles.buttonText}>🔊 Hear Sommelier Speak</Text>
+                <Pressable style={[styles.buttonSecondary, styles.smallButton]} onPress={() => speakResponse(response)}>
+                  <Text style={styles.smallButtonText}>🔊 Hear Sommelier Speak</Text>
                 </Pressable>
               ) : (
-                <Pressable style={styles.buttonSecondary} onPress={stopSpeaking}>
-                  <Text style={styles.buttonText}>⏹ Stop Speaking</Text>
+                <Pressable style={[styles.buttonSecondary, styles.smallButton]} onPress={stopSpeaking}>
+                  <Text style={styles.smallButtonText}>⏹ Stop Speaking</Text>
                 </Pressable>
               )}
-              {isSpeaking && <ActivityIndicator style={{ marginTop: 10 }} />}
+
+              <Pressable
+                style={[styles.buttonSecondary, styles.smallButton, { marginLeft: 10 }]}
+                onPress={() => {
+                  setChatHistory([]);
+                  setResponse('');
+                  setQuestion('');
+                  setLocalRes([]);
+                  setPhotoAsset(null);
+                }}
+              >
+                <Text style={[styles.smallButtonText, { color: '#5E5C49' }]}>🧼 Start Over</Text>
+              </Pressable>
             </View>
           )}
-
-          {userPlan === 'free' && (
-            <Text style={{ marginTop: 20, textAlign: 'center', color: '#B1624E', fontWeight: '600' }}>
-              🔓 Upgrade to unlock preferences and unlimited inquiries.
-            </Text>
-          )}
-
-          <Pressable
-            style={[styles.buttonSecondary, { marginTop: 32, backgroundColor: '#F3EFE7' }]}
-            onPress={() => {
-              setChatHistory([]);
-              setResponse('');
-              setQuestion('');
-              setLocalRes([]);
-              setPhotoAsset(null);
-            }}
-          >
-            <Text style={[styles.buttonText, { color: '#5E5C49' }]}>🧼 Start Over</Text>
-          </Pressable>
         </View>
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
-/* ---------- styles ---------- */
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
-    backgroundColor: '#F7F5EF', // sand/linen base
+    backgroundColor: '#0A0A0A', // Very dark charcoal background
   },
   content: {
-    flexGrow: 1,
+    flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
     paddingVertical: 38,
@@ -504,43 +491,70 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 470,
-    backgroundColor: '#FAF8F4', // light earth
+    backgroundColor: '#1E1E1E', // Dark slate
     borderRadius: 24,
     padding: 26,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.10,
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
     shadowRadius: 15,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 8 },
     elevation: 10,
     marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#2A2A2A', // Subtle border
   },
   header: {
     fontSize: 27,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 19,
     textAlign: 'center',
-    color: '#8B7C5A', // olive-brown
+    color: '#E0E0E0', // Light gray text
     letterSpacing: 0.3,
+    fontFamily: 'serif',
+  },
+  prefsToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: 8,
+    marginTop: -5,
+  },
+  prefsToggleText: {
+    color: '#B8B8B8', // Medium gray
+    fontWeight: '600',
+    fontSize: 16,
+    marginRight: 12,
+  },
+  prefsOffNote: {
+    color: '#A0A0A0', // Light gray
+    marginBottom: 7,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#D3C4B0',
+    borderWidth: 1.5,
+    borderColor: '#404040', // Medium gray border
     borderRadius: 13,
     padding: 15,
     marginBottom: 12,
-    backgroundColor: '#F6F4ED',
-    color: '#5E5C49',
+    backgroundColor: '#2A2A2A', // Dark input background
+    color: '#E0E0E0', // Light gray text
     fontSize: 16,
     minHeight: 56,
     textAlignVertical: 'top',
+    shadowColor: '#000000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   responseBox: {
     marginTop: 22,
-    backgroundColor: '#F2E9DF',
+    backgroundColor: '#252525', // Darker slate
     borderRadius: 15,
     padding: 17,
-    shadowColor: '#9C8C7B',
-    shadowOpacity: 0.08,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
     shadowRadius: 7,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
@@ -548,10 +562,10 @@ const styles = StyleSheet.create({
   listingCard: {
     marginBottom: 14,
     borderRadius: 11,
-    backgroundColor: '#F5ECE2',
+    backgroundColor: '#2A2A2A', // Dark slate
     padding: 10,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.05,
+    shadowColor: '#000000',
+    shadowOpacity: 0.1,
     shadowRadius: 2,
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
@@ -559,16 +573,23 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#B1624E', // terracotta
+    color: '#B8B8B8', // Medium gray
+  },
+  price: {
+    fontSize: 15,
+    color: '#E0E0E0', // Light gray text
+    fontWeight: 'bold',
+    marginBottom: 2,
   },
   sub: {
     fontSize: 14,
-    color: '#7D7358', // muted brown
+    color: '#A0A0A0', // Light gray
   },
   chatBox: {
     maxHeight: 400,
     marginTop: 18,
     marginBottom: 12,
+    paddingBottom: 40,
   },
   chatBubble: {
     padding: 12,
@@ -576,23 +597,49 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     borderRadius: 14,
     maxWidth: '80%',
-    shadowColor: '#A68262',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.15,
     shadowRadius: 3,
     elevation: 2,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#A9B09F44', // sage green transparent
+    backgroundColor: '#404040', // Medium gray
   },
   assistantBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: '#D4BFAA55', // tan transparent
+    backgroundColor: '#2A2A2A', // Dark slate
+  },
+  assistantItemBubble: {
+    marginBottom: 7,
+    backgroundColor: '#252525', // Darker slate
+    borderRadius: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+    maxWidth: '90%',
+  },
+  pairingBubble: {
+    marginBottom: 7,
+    backgroundColor: '#3A3A3A', // Darker slate
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    alignSelf: 'flex-start',
+    maxWidth: '90%',
+    borderLeftWidth: 5,
+    borderLeftColor: '#404040', // Medium gray
+  },
+  pairingText: {
+    fontWeight: '700',
+    color: '#B8B8B8', // Medium gray
+    fontSize: 16,
+    fontStyle: 'italic',
   },
   chatText: {
     fontSize: 16,
-    color: '#5E5C49',
+    color: '#E0E0E0', // Light gray text
   },
   buttonRow: {
     flexDirection: 'row',
@@ -601,34 +648,62 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   buttonPrimary: {
-    backgroundColor: '#B1624E', // terracotta
+    backgroundColor: '#404040', // Medium gray
     padding: 14,
     borderRadius: 13,
     alignItems: 'center',
     marginVertical: 5,
     flex: 1,
     marginHorizontal: 3,
-    shadowColor: '#8B7C5A',
-    shadowOpacity: 0.11,
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 5,
+    borderWidth: 1,
+    borderColor: '#505050', // Lighter gray accent
   },
   buttonSecondary: {
-    backgroundColor: '#A9B09F', // sage
+    backgroundColor: '#2A2A2A', // Dark slate
     padding: 14,
     borderRadius: 13,
     alignItems: 'center',
     marginVertical: 5,
     flex: 1,
     marginHorizontal: 3,
-    borderWidth: 1,
-    borderColor: '#B1A48A',
+    borderWidth: 1.5,
+    borderColor: '#404040', // Medium gray border
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   buttonText: {
-    color: '#FFF',
+    color: '#E0E0E0', // Light gray text
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 0.09,
+  },
+  speakAndResetRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginTop: 10,
+  },
+  smallButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginVertical: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+  smallButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.05,
+    color: '#E0E0E0', // Light gray text
+    textAlign: 'center',
   },
 });

@@ -41,7 +41,7 @@ export default function ChoosePlanScreen({ navigation, route, fetchPlan }: Props
       <View style={styles.planBox}>
         <Text style={styles.planLabel}>Premium Plan</Text>
         <Text style={styles.price}>
-          $9.99/month <Text style={styles.freeTrial}> (First month FREE!)</Text>
+          $2.99/month <Text style={styles.freeTrial}> (First month FREE!)</Text>
         </Text>
         <Text style={styles.planDesc}>
           – Personalized AI Sommelier{'\n'}
@@ -72,90 +72,66 @@ export default function ChoosePlanScreen({ navigation, route, fetchPlan }: Props
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#0A0A0A', // Very dark charcoal background
     justifyContent: 'center',
-    padding: 28,
-    backgroundColor: '#F7F5EF',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#1E1E1E', // Dark slate
+    borderRadius: 24,
+    padding: 32,
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A', // Subtle border
   },
   title: {
-    fontSize: 33,
-    fontWeight: '900',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#E0E0E0', // Light gray text
     textAlign: 'center',
-    color: '#8B7C5A',
-    letterSpacing: 1,
-    marginBottom: 5,
+    marginBottom: 16,
+    letterSpacing: 0.8,
     fontFamily: 'serif',
   },
   subtitle: {
+    fontSize: 18,
+    color: '#B8B8B8', // Medium gray
     textAlign: 'center',
-    fontSize: 16,
-    color: '#9A7B4F',
-    marginBottom: 26,
-    fontWeight: '500',
-    fontStyle: 'italic',
-  },
-  planBox: {
-    backgroundColor: '#FAF8F4',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#D3C4B0',
-    padding: 32,
-    marginVertical: 8,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.07,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 5,
-    alignItems: 'center',
-  },
-  planLabel: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#B1624E',
-    marginBottom: 4,
-    letterSpacing: 0.2,
-  },
-  price: {
-    fontSize: 21,
-    fontWeight: '600',
-    color: '#8B7C5A',
-    marginBottom: 8,
-  },
-  freeTrial: {
-    color: '#388E3C',
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  planDesc: {
-    fontSize: 16,
-    color: '#59422C',
-    marginVertical: 14,
-    textAlign: 'center',
+    marginBottom: 32,
     lineHeight: 24,
+    letterSpacing: 0.3,
   },
-  buttonPrimary: {
-    backgroundColor: '#B1624E',
-    paddingVertical: 15,
-    paddingHorizontal: 34,
-    borderRadius: 13,
+  button: {
+    backgroundColor: '#404040', // Medium gray
+    padding: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 6,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.16,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-    minWidth: 180,
+    marginVertical: 8,
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#505050', // Lighter gray accent
   },
   buttonText: {
-    color: '#fff',
+    color: '#E0E0E0', // Light gray text
     fontWeight: '700',
     fontSize: 18,
     letterSpacing: 0.2,
   },
-  finePrint: {
-    color: '#7B6650',
-    marginTop: 14,
-    fontSize: 12,
+  loadingText: {
+    color: '#B8B8B8', // Medium gray
+    fontSize: 16,
     textAlign: 'center',
+    marginTop: 16,
   },
 });

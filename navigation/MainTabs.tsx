@@ -3,16 +3,17 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import WineChat from '../components/WineChat';
 import PreferencesScreen from '../components/PreferencesScreen';
 import ProfileScreen from '../components/ProfileScreen';
-//import WineJournalScreen from '../components/WineJournalScreen';
 import JournalStack from './JournalStack'; 
 import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet } from 'react-native';
 
 const Tab = createBottomTabNavigator();
 
 type Props = {
-  userPlan: 'free' | 'paid' | null;
+  userPlan: 'paid' | null;
   userEmail: string;
   logout: () => void;
+  navigation: any;
 };
 
 export default function MainTabs({ userPlan, userEmail, logout }: Props) {
@@ -23,14 +24,17 @@ export default function MainTabs({ userPlan, userEmail, logout }: Props) {
       : name === 'Journal' ? 'book'
       : 'help';
 
+  const effectivePlan = userPlan ?? 'paid';
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ color, size }) => (
           <Ionicons name={iconFor(route.name) as any} size={size} color={color} />
         ),
-        tabBarActiveTintColor: '#800000',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: styles.tabBarActiveLabel.color,
+        tabBarInactiveTintColor: styles.tabBarLabel.color,
+        tabBarStyle: styles.tabBar,
         headerShown: false,
       })}
     >
@@ -39,23 +43,21 @@ export default function MainTabs({ userPlan, userEmail, logout }: Props) {
         {(p) => (
           <WineChat
             {...p}
-            userPlan={userPlan || 'free'}
+            userPlan={effectivePlan}
             userEmail={userEmail}
           />
         )}
       </Tab.Screen>
 
       {/* Wine Journal -------------------------------------------------- */}
-      
       <Tab.Screen
         name="Journal"
         component={JournalStack}
         initialParams={{ userEmail }}
       />
 
-
       {/* Preferences (paid only) -------------------------------------- */}
-      {userPlan === 'paid' && (
+      {effectivePlan === 'paid' && (
         <Tab.Screen name="Preferences">
           {(p) => <PreferencesScreen {...p} userEmail={userEmail} />}
         </Tab.Screen>
@@ -67,7 +69,7 @@ export default function MainTabs({ userPlan, userEmail, logout }: Props) {
           <ProfileScreen
             {...p}
             userEmail={userEmail}
-            userPlan={userPlan || 'free'}
+            userPlan={effectivePlan}
             logout={logout}
           />
         )}
@@ -75,3 +77,30 @@ export default function MainTabs({ userPlan, userEmail, logout }: Props) {
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: '#1E1E1E', // Dark slate
+    borderTopWidth: 1,
+    borderTopColor: '#2A2A2A', // Subtle border
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 8,
+  },
+  tabBarLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#B8B8B8', // Medium gray
+  },
+  tabBarActiveLabel: {
+    color: '#E0E0E0', // Light gray text
+  },
+  tabBarIcon: {
+    color: '#B8B8B8', // Medium gray
+  },
+  tabBarActiveIcon: {
+    color: '#E0E0E0', // Light gray text
+  },
+});

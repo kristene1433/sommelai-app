@@ -31,8 +31,14 @@ const preferenceRoutes = require('./routes/preferences');
 app.use('/api/preferences', preferenceRoutes);
 
 // 5. Vision routes
-const vision = require('./routes/vision');
-app.use('/api/vision', vision); // e.g. POST /api/vision/somm
+const visionRouter = require('./routes/vision');
+app.use('/api/vision', visionRouter); 
+
+// 6. Cancel subscription routes
+const cancelRoutes = require('./routes/cancel');  // or correct path
+app.use('/api/subscription', cancelRoutes);
+
+
 
 // MongoDB connect
 mongoose.connect(process.env.MONGODB_URI)

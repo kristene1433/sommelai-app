@@ -13,12 +13,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 
 type ReviewRoute = RouteProp<RootStackParamList, 'ReviewEntry'>;
-type Nav        = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ReviewEntryScreen() {
   const { params } = useRoute<ReviewRoute>();
   const navigation = useNavigation<Nav>();
-  const { entry }  = params;
+  const { entry } = params;
 
   const Row = ({ label, value }: { label: string; value?: string }) =>
     value ? (
@@ -28,9 +28,18 @@ export default function ReviewEntryScreen() {
       </View>
     ) : null;
 
+  // Format dateTasted nicely or show nothing if missing/invalid
+  const formattedDateTasted = entry.dateTasted
+    ? new Date(entry.dateTasted).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : undefined;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F5EF' }}>
-      <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.card}>
           {/* ----- Title ----- */}
           <Text style={styles.header}>
@@ -46,47 +55,42 @@ export default function ReviewEntryScreen() {
           {/* ----- Wine Info ----- */}
           <Text style={styles.section}>🍇 Wine Info</Text>
           <Row label="Region / Country" value={entry.region} />
-          <Row label="Producer"         value={entry.producer} />
-          <Row label="Varietals"        value={entry.varietals} />
-          <Row label="Price"            value={entry.price} />
-          <Row label="Alcohol %"        value={entry.alcoholPercent} />
-          <Row label="Serving Temp"     value={entry.servingTemp} />
-          <Row label="Date Tasted"      value={entry.dateTasted} />
-          <Row label="Where / With Whom"value={entry.whereWithWhom} />
-          <Row label="Rating (1–5)"     value={entry.rating} />
+          <Row label="Producer" value={entry.producer} />
+          <Row label="Varietals" value={entry.varietals} />
+          <Row label="Date Tasted" value={formattedDateTasted} />
 
+          {/* ----- Visual ----- */}
           <Text style={styles.section}>🟥 Visual</Text>
-          <Row label="Clarity"          value={entry.clarity} />
-          <Row label="Brightness"       value={entry.brightness} />
-          <Row label="Color Intensity"  value={entry.colorIntensity} />
-          <Row label="Hue (Red)"        value={entry.hueRed} />
-          <Row label="Hue (White)"      value={entry.hueWhite} />
-          <Row label="Viscosity"        value={entry.viscosity} />
+          <Row label="Clarity" value={entry.clarity} />
+          <Row label="Brightness" value={entry.brightness} />
+          <Row label="Color Intensity" value={entry.colorIntensity} />
+          <Row label="Hue (Red)" value={entry.hueRed} />
+          <Row label="Hue (White)" value={entry.hueWhite} />
+          <Row label="Viscosity" value={entry.viscosity} />
 
+          {/* ----- Nose & Palate ----- */}
           <Text style={styles.section}>🟨 Nose & Palate</Text>
-          <Row label="Aroma Intensity"  value={entry.aromaIntensity} />
-          <Row label="Primary Aroma"    value={entry.primaryAroma} />
-          <Row label="Secondary Aroma"  value={entry.secondaryAroma} />
-          <Row label="Tertiary Aroma"   value={entry.tertiaryAroma} />
-          <Row label="Fruit Character"  value={entry.fruitCharacter} />
-          <Row label="Non-Fruit Notes"  value={entry.nonFruitNotes} />
+          <Row label="Aroma Intensity" value={entry.aromaIntensity} />
+          <Row label="Primary Aroma" value={entry.primaryAroma} />
+          <Row label="Secondary Aroma" value={entry.secondaryAroma} />
+          <Row label="Tertiary Aroma" value={entry.tertiaryAroma} />
 
+          {/* ----- Structure ----- */}
           <Text style={styles.section}>🟩 Structure</Text>
-          <Row label="Sweetness"        value={entry.sweetness} />
-          <Row label="Acidity"          value={entry.acidity} />
-          <Row label="Tannin"           value={entry.tannin} />
-          <Row label="Alcohol Level"    value={entry.alcoholLevel} />
-          <Row label="Body"             value={entry.body} />
-          <Row label="Texture"          value={entry.texture} />
-          <Row label="Balance"          value={entry.balance} />
-          <Row label="Finish"           value={entry.finish} />
+          <Row label="Sweetness" value={entry.sweetness} />
+          <Row label="Acidity" value={entry.acidity} />
+          <Row label="Tannin" value={entry.tannin} />
+          <Row label="Alcohol Level" value={entry.alcoholLevel} />
+          <Row label="Body" value={entry.body} />
+          <Row label="Finish" value={entry.finish} />
 
+          {/* ----- Conclusion ----- */}
           <Text style={styles.section}>🟦 Conclusion</Text>
-          <Row label="Quality Level"    value={entry.qualityLevel} />
-          <Row label="Readiness"        value={entry.readiness} />
-          <Row label="Age Potential"    value={entry.agePotential} />
-          <Row label="Grape Guess"      value={entry.grapeGuess} />
-          <Row label="Origin Guess"     value={entry.originGuess} />
+          <Row label="Quality Level" value={entry.qualityLevel} />
+          <Row label="Readiness" value={entry.readiness} />
+          <Row label="Age Potential" value={entry.agePotential} />
+          <Row label="Grape Guess" value={entry.grapeGuess} />
+          <Row label="Origin Guess" value={entry.originGuess} />
 
           {/* ----- Navigation Buttons ----- */}
           <View style={styles.buttons}>
@@ -122,9 +126,12 @@ export default function ReviewEntryScreen() {
   );
 }
 
-/* ---------- Earthy Styles ---------- */
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#0A0A0A', // Very dark charcoal background
+  },
+  scrollContainer: {
     flexGrow: 1,
     alignItems: 'center',
     paddingVertical: 32,
@@ -133,35 +140,35 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 440,
-    backgroundColor: '#FAF8F4', // warm cream
-    borderRadius: 22,
-    padding: 26,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    backgroundColor: '#1E1E1E', // Dark slate
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
     marginVertical: 16,
     borderWidth: 1,
-    borderColor: '#E4D6C2',
+    borderColor: '#2A2A2A', // Subtle border
   },
   header: {
     fontSize: 29,
-    fontWeight: 'bold',
-    color: '#8B7C5A', // olive-brown
+    fontWeight: '700',
+    color: '#E0E0E0', // Light gray text
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: 0.6,
+    fontFamily: 'serif',
   },
   section: {
     fontSize: 20,
     fontWeight: '700',
     marginTop: 22,
     marginBottom: 9,
-    color: '#A68262', // taupe/coffee
-    textShadowColor: '#f4eee3',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    color: '#B8B8B8', // Medium gray
+    letterSpacing: 0.3,
+    fontFamily: 'serif',
   },
   row: {
     flexDirection: 'row',
@@ -170,16 +177,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 1,
     borderBottomWidth: 0.5,
-    borderColor: '#E4D6C2',
+    borderColor: '#2A2A2A', // Subtle border
   },
   label: {
     fontWeight: '600',
-    color: '#6E6040', // muted brown
+    color: '#A0A0A0', // Light gray
     flexShrink: 1,
     fontSize: 16,
   },
   value: {
-    color: '#554F39', // darker coffee
+    color: '#E0E0E0', // Light gray text
     textAlign: 'right',
     flex: 1,
     marginLeft: 16,
@@ -192,7 +199,9 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginTop: 20,
     marginBottom: 18,
-    backgroundColor: '#ECE3D3',
+    backgroundColor: '#2A2A2A', // Dark background
+    borderWidth: 1,
+    borderColor: '#404040', // Medium gray border
   },
   buttons: {
     flexDirection: 'row',
@@ -207,22 +216,24 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     marginHorizontal: 2,
     marginBottom: 5,
-    shadowColor: '#D3C4B0',
-    shadowOpacity: 0.10,
+    shadowColor: '#000000',
+    shadowOpacity: 0.15,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   buttonPrimary: {
-    backgroundColor: '#B1624E', // terracotta
+    backgroundColor: '#404040', // Medium gray
+    borderWidth: 1,
+    borderColor: '#505050', // Lighter gray accent
   },
   buttonSecondary: {
-    backgroundColor: '#E9E2D1', // pale sand
-    borderWidth: 1,
-    borderColor: '#CBBFA4',
+    backgroundColor: '#2A2A2A', // Dark slate
+    borderWidth: 1.5,
+    borderColor: '#404040', // Medium gray border
   },
   buttonText: {
-    color: '#5E5C49', // earth brown
+    color: '#E0E0E0', // Light gray text
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 0.07,

@@ -8,10 +8,10 @@ import {
   Alert,
   Pressable,
 } from 'react-native';
-// import { LinearGradient } from 'expo-linear-gradient'; // If you want to use gradients
 
-const wineTypes      = ['Red', 'White', 'Rosé', 'Sparkling', 'Fortified'];
-const flavorProfiles = ['Dry', 'Fruity', 'Sweet', 'Earthy', 'Spicy', 'Bold'];
+const wineTypes = ['Red', 'White', 'Rosé', 'Sparkling', 'Fortified'];
+const flavorProfiles = ['Dry', 'Sweet', 'Earthy', 'Fruity', 'Spicy'];
+const bodyOptions = ['Big', 'Medium', 'Light'];
 
 type Props = {
   userEmail: string;
@@ -20,8 +20,9 @@ type Props = {
 const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
 export default function PreferencesScreen({ userEmail }: Props) {
-  const [selectedWines,   setSelectedWines]   = useState<string[]>([]);
+  const [selectedWines, setSelectedWines] = useState<string[]>([]);
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
+  const [selectedBody, setSelectedBody] = useState<string>('');
 
   useEffect(() => {
     (async () => {
@@ -29,14 +30,15 @@ export default function PreferencesScreen({ userEmail }: Props) {
         const res = await fetch(`${BASE_URL}/api/preferences/${userEmail}`);
         if (res.ok) {
           const data = await res.json();
-          setSelectedWines(data.wineTypes      || []);
+          setSelectedWines(data.wineTypes || []);
           setSelectedFlavors(data.flavorProfiles || []);
+          setSelectedBody(data.body || '');
         }
       } catch (err) {
         console.error('Load prefs error:', err);
       }
     })();
-  }, []);
+  }, [userEmail]);
 
   const toggle = (
     item: string,
@@ -49,12 +51,13 @@ export default function PreferencesScreen({ userEmail }: Props) {
   const savePreferences = async () => {
     try {
       const res = await fetch(`${BASE_URL}/api/preferences`, {
-        method : 'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({
+        body: JSON.stringify({
           email: userEmail,
-          wineTypes      : selectedWines,
-          flavorProfiles : selectedFlavors,
+          wineTypes: selectedWines,
+          flavorProfiles: selectedFlavors,
+          body: selectedBody,
         }),
       });
       if (!res.ok) throw new Error('Bad response');
@@ -65,13 +68,13 @@ export default function PreferencesScreen({ userEmail }: Props) {
     }
   };
 
-  // Use LinearGradient for background if you want (see comments).
   return (
     <View style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
           <Text style={styles.title}>🍷 My Preferences</Text>
 
+          {/* Wine Types */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Wine Types</Text>
             {wineTypes.map((w) => (
@@ -80,13 +83,14 @@ export default function PreferencesScreen({ userEmail }: Props) {
                 <Switch
                   value={selectedWines.includes(w)}
                   onValueChange={() => toggle(w, selectedWines, setSelectedWines)}
-                  trackColor={{ true: '#B1624E', false: '#D8C8B8' }}   // terracotta, sand
+                  trackColor={{ true: '#B1624E', false: '#D8C8B8' }} // terracotta, sand
                   thumbColor={selectedWines.includes(w) ? '#8B7C5A' : '#B8A88A'} // olive, beige
                 />
               </View>
             ))}
           </View>
 
+          {/* Flavor Profiles (excluding Body) */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Flavor Profiles</Text>
             {flavorProfiles.map((f) => (
@@ -102,8 +106,33 @@ export default function PreferencesScreen({ userEmail }: Props) {
             ))}
           </View>
 
+          {/* Body Selection (Single Choice) */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Body</Text>
+            <View style={styles.bodyOptionsContainer}>
+              {bodyOptions.map((option) => {
+                const selected = selectedBody === option;
+                return (
+                  <Pressable
+                    key={option}
+                    style={[
+                      styles.bodyOption,
+                      selected ? styles.bodyOptionSelected : styles.bodyOptionUnselected,
+                    ]}
+                    onPress={() => setSelectedBody(option)}
+                  >
+                    <Text style={selected ? styles.bodyTextSelected : styles.bodyTextUnselected}>
+                      {option}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Save Button */}
           <Pressable style={styles.buttonPrimary} onPress={savePreferences}>
-            <Text style={styles.buttonText}>💾 Save Preferences</Text>
+            <Text style={styles.buttonText}> ✅ Save Preferences</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -111,11 +140,10 @@ export default function PreferencesScreen({ userEmail }: Props) {
   );
 }
 
-/* ---------- Earthy Organic Styles ---------- */
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
-    backgroundColor: '#F7F5EF', // sand/linen
+    backgroundColor: '#0A0A0A', // Very dark charcoal background
   },
   container: {
     flexGrow: 1,
@@ -127,25 +155,26 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#FAF8F4', // off-white cream
-    borderRadius: 22,
-    padding: 24,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.11,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
+    backgroundColor: '#1E1E1E', // Dark slate
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
     marginVertical: 20,
     borderWidth: 1,
-    borderColor: '#E4D6C2',
+    borderColor: '#2A2A2A', // Subtle border
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#8B7C5A', // olive-brown
+    fontWeight: '700',
+    color: '#E0E0E0', // Light gray text
     textAlign: 'center',
     marginBottom: 20,
     letterSpacing: 0.5,
+    fontFamily: 'serif',
   },
   sectionCard: {
     backgroundColor: '#F4EFE8', // soft sand
@@ -161,11 +190,12 @@ const styles = StyleSheet.create({
     borderColor: '#EFE0CA',
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#7B6E49', // earthy brown-olive
-    marginBottom: 10,
-    letterSpacing: 0.2,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#B8B8B8', // Medium gray
+    marginBottom: 12,
+    letterSpacing: 0.3,
+    fontFamily: 'serif',
   },
   row: {
     flexDirection: 'row',
@@ -178,27 +208,60 @@ const styles = StyleSheet.create({
     borderColor: '#E4D6C2',
   },
   label: {
-    fontSize: 17,
-    color: '#6E6040', // walnut brown
+    marginTop: 10,
+    fontSize: 14,
+    color: '#A0A0A0', // Light gray
     fontWeight: '500',
+    marginBottom: 4,
+    letterSpacing: 0.2,
   },
   buttonPrimary: {
-    backgroundColor: '#B1624E', // terracotta
-    padding: 15,
-    borderRadius: 13,
+    backgroundColor: '#404040', // Medium gray
+    padding: 18,
+    borderRadius: 16,
     alignItems: 'center',
     marginTop: 24,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.13,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#505050', // Lighter gray accent
   },
   buttonText: {
-    color: '#FAF8F4',
+    color: '#E0E0E0', // Light gray text
     fontWeight: '700',
-    fontSize: 17,
-    letterSpacing: 0.1,
+    fontSize: 18,
+    letterSpacing: 0.2,
+  },
+  bodyOptionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  bodyOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 2,
+    marginHorizontal: 8,
+  },
+  bodyOptionSelected: {
+    backgroundColor: '#404040', // Medium gray
+    borderColor: '#505050', // Lighter gray accent
+  },
+  bodyOptionUnselected: {
+    backgroundColor: '#F6F4ED',
+    borderColor: '#D3C4B0',
+  },
+  bodyTextSelected: {
+    color: '#FFFFFF', // White text for selected
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  bodyTextUnselected: {
+    color: '#5E5C49',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
-

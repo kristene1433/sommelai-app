@@ -16,7 +16,7 @@ expo-env.d.ts
 *.p8
 *.p12
 *.key
-*.mobileprovision
+*.mobilepro
 
 # Metro
 .metro-health-check*
@@ -37,3 +37,5 @@ yarn-error.*
 *.tsbuildinfo
 .env
 backend/.env
+
+.vercel

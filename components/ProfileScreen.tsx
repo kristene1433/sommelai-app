@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, ScrollView, Alert, Pressable,
+  View, Text, TextInput, StyleSheet, ScrollView, Alert, Pressable, Modal,
 } from 'react-native';
-// import { LinearGradient } from 'expo-linear-gradient'; // For gradients if desired
 
 type Props = {
   userEmail : string;
@@ -30,9 +29,15 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
   const [confirmPass, setConfirmPass] = useState('');
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
 
+  // New states for subscription
+  const [subscriptionEnd, setSubscriptionEnd] = useState<number | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [loadingCancel, setLoadingCancel] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
+        // Load profile info
         const res = await fetch(`${BASE_URL}/api/preferences/${userEmail}`);
         if (res.ok) {
           const d = await res.json();
@@ -48,11 +53,20 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
           setEmail   (d.email     || userEmail);
           setHasPassword(d.hasPassword || false);
         }
+
+        // Load subscription end date if paid
+        if (userPlan === 'paid') {
+          const subRes = await fetch(`${BASE_URL}/api/subscription/end-date?email=${encodeURIComponent(userEmail)}`);
+          if (subRes.ok) {
+            const json = await subRes.json();
+            if (json.endDate) setSubscriptionEnd(json.endDate);
+          }
+        }
       } catch (err) {
         console.error('Load profile error:', err);
       }
     })();
-  }, []);
+  }, [userEmail, userPlan]);
 
   const handleLogout = () => {
     logout();
@@ -150,7 +164,33 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
     }
   };
 
-  // Use LinearGradient for background if you want (see comment).
+  // Cancel subscription handler
+  const confirmCancelSubscription = async () => {
+    setLoadingCancel(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/subscription/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        Alert.alert(
+          'Subscription Cancelled',
+          `Your subscription will remain active until ${subscriptionEnd ? new Date(subscriptionEnd).toLocaleDateString() : 'end of billing period'}.`,
+        );
+        setShowCancelModal(false);
+      } else {
+        Alert.alert('Error', data.error || 'Failed to cancel subscription.');
+      }
+    } catch (err) {
+      console.error('Cancel subscription error:', err);
+      Alert.alert('Error', 'Failed to cancel subscription.');
+    } finally {
+      setLoadingCancel(false);
+    }
+  };
+
   return (
     <View style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -167,10 +207,24 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
               autoCapitalize="none"
               keyboardType="email-address"
               placeholder="Email"
-              placeholderTextColor="#b8a88a"
+              placeholderTextColor="#A0A0A0"
             />
             <Text style={styles.label}>Plan</Text>
             <Text style={styles.readonly}>{userPlan === 'paid' ? 'Premium' : 'Free'}</Text>
+
+            {userPlan === 'paid' && subscriptionEnd && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={{ fontSize: 14, color: '#B8B8B8' }}>
+                  Your subscription is active until: {new Date(subscriptionEnd).toLocaleDateString()}
+                </Text>
+                <Pressable
+                  style={[styles.buttonSecondary, { marginTop: 10 }]}
+                  onPress={() => setShowCancelModal(true)}
+                >
+                  <Text style={styles.buttonText}>Cancel Subscription</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
 
           {hasPassword === false ? (
@@ -182,7 +236,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
                 onChangeText={setNewPass}
                 placeholder="New Password"
                 secureTextEntry
-                placeholderTextColor="#b8a88a"
+                placeholderTextColor="#A0A0A0"
               />
               <TextInput
                 style={styles.input}
@@ -190,7 +244,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
                 onChangeText={setConfirmPass}
                 placeholder="Confirm New Password"
                 secureTextEntry
-                placeholderTextColor="#b8a88a"
+                placeholderTextColor="#A0A0A0"
               />
             </View>
           ) : hasPassword === true ? (
@@ -202,7 +256,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
                 onChangeText={setOldPass}
                 placeholder="Current Password"
                 secureTextEntry
-                placeholderTextColor="#b8a88a"
+                placeholderTextColor="#A0A0A0"
               />
               <TextInput
                 style={styles.input}
@@ -210,7 +264,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
                 onChangeText={setNewPass}
                 placeholder="New Password"
                 secureTextEntry
-                placeholderTextColor="#b8a88a"
+                placeholderTextColor="#A0A0A0"
               />
               <TextInput
                 style={styles.input}
@@ -218,23 +272,23 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
                 onChangeText={setConfirmPass}
                 placeholder="Confirm New Password"
                 secureTextEntry
-                placeholderTextColor="#b8a88a"
+                placeholderTextColor="#A0A0A0"
               />
             </View>
           ) : null}
 
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Contact Info</Text>
-            <TextInput style={styles.input} placeholder="First Name" value={firstName} onChangeText={setFirst} placeholderTextColor="#b8a88a" />
-            <TextInput style={styles.input} placeholder="Last Name" value={lastName} onChangeText={setLast} placeholderTextColor="#b8a88a" />
+            <TextInput style={styles.input} placeholder="First Name" value={firstName} onChangeText={setFirst} placeholderTextColor="#A0A0A0" />
+            <TextInput style={styles.input} placeholder="Last Name" value={lastName} onChangeText={setLast} placeholderTextColor="#A0A0A0" />
           </View>
 
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Address</Text>
-            <TextInput style={styles.input} placeholder="Street Address" value={address} onChangeText={setAddr} placeholderTextColor="#b8a88a" />
-            <TextInput style={styles.input} placeholder="City" value={city} onChangeText={setCity} placeholderTextColor="#b8a88a" />
-            <TextInput style={styles.input} placeholder="State" value={stateVal} onChangeText={setStateVal} placeholderTextColor="#b8a88a" />
-            <TextInput style={styles.input} placeholder="ZIP" value={zip} onChangeText={setZip} keyboardType="number-pad" placeholderTextColor="#b8a88a" />
+            <TextInput style={styles.input} placeholder="Street Address" value={address} onChangeText={setAddr} placeholderTextColor="#A0A0A0" />
+            <TextInput style={styles.input} placeholder="City" value={city} onChangeText={setCity} placeholderTextColor="#A0A0A0" />
+            <TextInput style={styles.input} placeholder="State" value={stateVal} onChangeText={setStateVal} placeholderTextColor="#A0A0A0" />
+            <TextInput style={styles.input} placeholder="ZIP" value={zip} onChangeText={setZip} keyboardType="number-pad" placeholderTextColor="#A0A0A0" />
           </View>
 
           <View style={styles.sectionCard}>
@@ -247,7 +301,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
                 keyboardType="number-pad"
                 value={areaCode}
                 onChangeText={setArea}
-                placeholderTextColor="#b8a88a"
+                placeholderTextColor="#A0A0A0"
               />
               <TextInput
                 style={[styles.input, { flex: 2 }]}
@@ -255,18 +309,55 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
                 keyboardType="phone-pad"
                 value={phone}
                 onChangeText={setPhone}
-                placeholderTextColor="#b8a88a"
+                placeholderTextColor="#A0A0A0"
               />
             </View>
           </View>
 
           <Pressable style={styles.buttonPrimary} onPress={save}>
-            <Text style={styles.buttonText}>💾 Save Profile</Text>
+            <Text style={styles.buttonText}>✅ Save Profile</Text>
           </Pressable>
           <Pressable style={[styles.buttonSecondary, { marginTop: 18 }]} onPress={handleLogout}>
             <Text style={styles.buttonText}>🚪 Log Out</Text>
           </Pressable>
         </View>
+
+        {/* Cancel Subscription Confirmation Modal */}
+        <Modal
+          transparent
+          visible={showCancelModal}
+          animationType="fade"
+          onRequestClose={() => setShowCancelModal(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalContent}>
+              <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 10 }}>
+                Confirm Subscription Cancellation
+              </Text>
+              <Text style={{ marginBottom: 20 }}>
+                Are you sure you want to cancel your subscription? It will remain active until{' '}
+                {subscriptionEnd ? new Date(subscriptionEnd).toLocaleDateString() : 'your period ends'}.
+              </Text>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <Pressable
+                  style={[styles.buttonSecondary, { marginRight: 10 }]}
+                  onPress={() => setShowCancelModal(false)}
+                  disabled={loadingCancel}
+                >
+                  <Text style={styles.buttonText}>No</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.buttonPrimary}
+                  onPress={confirmCancelSubscription}
+                  disabled={loadingCancel}
+                >
+                  <Text style={styles.buttonText}>{loadingCancel ? 'Cancelling...' : 'Yes, Cancel'}</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </View>
   );
@@ -275,7 +366,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
-    backgroundColor: '#F7F5EF', // sand/linen
+    backgroundColor: '#0A0A0A', // Very dark charcoal background
   },
   container: {
     flexGrow: 1,
@@ -287,102 +378,145 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#FAF8F4', // off-white cream
-    borderRadius: 22,
-    padding: 24,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.11,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
+    backgroundColor: '#1E1E1E', // Dark slate
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
     marginVertical: 20,
     borderWidth: 1,
-    borderColor: '#E4D6C2',
+    borderColor: '#2A2A2A', // Subtle border
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#8B7C5A', // olive-brown
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#E0E0E0', // Light gray text
     textAlign: 'center',
-    marginBottom: 14,
-    letterSpacing: 0.5,
+    marginBottom: 20,
+    letterSpacing: 0.8,
+    fontFamily: 'serif',
   },
   sectionCard: {
-    backgroundColor: '#F4EFE8', // soft sand
-    borderRadius: 18,
-    padding: 18,
-    marginVertical: 7,
-    marginBottom: 10,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
+    backgroundColor: '#252525', // Darker slate
+    borderRadius: 20,
+    padding: 22,
+    marginVertical: 8,
+    marginBottom: 12,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#EFE0CA',
+    borderColor: '#2A2A2A',
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#7B6E49', // earthy brown-olive
-    marginBottom: 6,
-    letterSpacing: 0.2,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#B8B8B8', // Medium gray
+    marginBottom: 8,
+    letterSpacing: 0.3,
+    fontFamily: 'serif',
   },
   label: {
-    marginTop: 8,
-    fontSize: 13,
-    color: '#9E895B', // muted straw/khaki
+    marginTop: 10,
+    fontSize: 14,
+    color: '#A0A0A0', // Light gray
     fontWeight: '500',
-    marginBottom: 2,
+    marginBottom: 4,
+    letterSpacing: 0.2,
   },
   readonly: {
-    fontSize: 15,
-    color: '#78623C',
-    backgroundColor: '#F7F0E2',
-    borderRadius: 8,
-    padding: 9,
-    marginBottom: 7,
-    marginTop: 3,
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#E0E0E0', // Light gray text
+    backgroundColor: '#2A2A2A', // Dark background
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    marginTop: 4,
+    fontWeight: '600',
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: '#404040', // Medium gray
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#E4D6C2',
-    borderRadius: 12,
-    padding: 11,
-    fontSize: 15,
-    marginTop: 7,
-    marginBottom: 3,
-    backgroundColor: '#FCFAF5',
-    color: '#665B47', // taupe/brown
+    borderWidth: 1.5,
+    borderColor: '#404040', // Medium gray border
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    backgroundColor: '#2A2A2A', // Dark input background
+    color: '#E0E0E0', // Light gray text
+    shadowColor: '#000000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  phoneRow: { flexDirection: 'row', alignItems: 'center', marginTop: 7 },
+  phoneRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginTop: 8,
+    gap: 8,
+  },
   buttonPrimary: {
-    backgroundColor: '#B1624E', // terracotta
-    padding: 15,
-    borderRadius: 13,
+    backgroundColor: '#404040', // Medium gray
+    padding: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    marginVertical: 10,
-    shadowColor: '#A68262',
-    shadowOpacity: 0.13,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
+    marginVertical: 12,
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#505050', // Lighter gray accent
   },
   buttonSecondary: {
-    backgroundColor: '#F3E5D5', // pale sand
-    padding: 14,
-    borderRadius: 13,
+    backgroundColor: '#2A2A2A', // Dark slate
+    padding: 16,
+    borderRadius: 16,
     alignItems: 'center',
-    marginVertical: 4,
-    borderWidth: 1,
-    borderColor: '#C4B295',
+    marginVertical: 6,
+    borderWidth: 1.5,
+    borderColor: '#404040', // Medium gray border
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   buttonText: {
-    color: '#6E6040', // walnut brown
+    color: '#E0E0E0', // Light gray text
     fontWeight: '700',
-    fontSize: 17,
-    letterSpacing: 0.1,
+    fontSize: 18,
+    letterSpacing: 0.2,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: '#000000EE', // Very dark backdrop
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1E1E1E', // Dark slate
+    padding: 28,
+    borderRadius: 20,
+    width: '85%',
+    shadowColor: '#000000',
+    shadowOpacity: 0.35,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
 });
+
 

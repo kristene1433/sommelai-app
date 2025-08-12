@@ -5,6 +5,7 @@ const router = express.Router();
 
 /* ----------  ADD  (POST)  ---------- */
 router.post('/add', async (req, res) => {
+  console.log('POST /add body:', req.body);  // Add this line for debugging
   try {
     const newEntry = new WineJournalEntry(req.body);
     const saved = await newEntry.save();
@@ -14,6 +15,7 @@ router.post('/add', async (req, res) => {
     res.status(400).json({ error: err.message || 'Invalid input.' });
   }
 });
+
 
 /* ----------  DELETE  (by _id)  ---------- */
 /*  Client hits: DELETE /api/journal/<id>   */
