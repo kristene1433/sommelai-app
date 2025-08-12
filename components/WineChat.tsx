@@ -169,17 +169,26 @@ export default function WineChat({ userPlan, userEmail }: Props) {
     setLoading(true);
     setResponse('');
     try {
-      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      const r = await fetch('https://api-inference.huggingface.co/models/openai/gpt-oss-20b', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${OPENAI_API_KEY?.trim()}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ model: 'gpt-oss-20b', messages }),
+        body: JSON.stringify({
+          inputs: messages,
+          parameters: {
+            reasoning_effort: 'medium', // low, medium, high
+            max_new_tokens: 500,
+            temperature: 0.7,
+            do_sample: true
+          }
+        }),
       });
       const data = await r.json();
-      if (data.choices?.length) {
-        const content = cleanAssistantResponse(data.choices[0].message.content);
+      
+      if (r.ok && data && data[0]?.generated_text) {
+        const content = cleanAssistantResponse(data[0].generated_text);
         setResponse(content);
         setChatHistory(prev => [
           ...prev,
@@ -187,11 +196,30 @@ export default function WineChat({ userPlan, userEmail }: Props) {
           { role: 'assistant', content, type: 'text' },
         ]);
         setQuestion('');
+      } else if (data.error) {
+        console.error('HuggingFace API Error:', data.error);
+        setResponse(`⚠️ API Error: ${data.error || 'Unknown error'}`);
+        setChatHistory(prev => [
+          ...prev,
+          { role: 'user', content: question, type: 'text' },
+          { role: 'assistant', content: `⚠️ API Error: ${data.error || 'Unknown error'}`, type: 'text' },
+        ]);
       } else {
         setResponse('⚠️ No answer returned.');
+        setChatHistory(prev => [
+          ...prev,
+          { role: 'user', content: question, type: 'text' },
+          { role: 'assistant', content: '⚠️ No answer returned.', type: 'text' },
+        ]);
       }
-    } catch {
-      setResponse('Something went wrong.');
+    } catch (error) {
+      console.error('Network Error:', error);
+      setResponse('⚠️ Network error - please check your connection');
+      setChatHistory(prev => [
+        ...prev,
+        { role: 'user', content: question, type: 'text' },
+        { role: 'assistant', content: '⚠️ Network error - please check your connection', type: 'text' },
+      ]);
     }
     setLoading(false);
   };
@@ -416,6 +444,11 @@ export default function WineChat({ userPlan, userEmail }: Props) {
               nestedScrollEnabled={true}
               keyboardShouldPersistTaps="handled"
             >
+              {chatHistory.length === 0 && !loading && (
+                <Text style={styles.emptyStateText}>
+                  Ask me anything about wine! 🍷
+                </Text>
+              )}
               {chatHistory.map((msg, idx) => (
                 <View
                   key={idx}
@@ -441,6 +474,12 @@ export default function WineChat({ userPlan, userEmail }: Props) {
                     )}
                 </View>
               ))}
+              {loading && (
+                <View style={styles.loadingBubble}>
+                  <ActivityIndicator size="small" color="#E0E0E0" />
+                  <Text style={styles.loadingText}>Thinking...</Text>
+                </View>
+              )}
             </ScrollView>
           )}
 
@@ -705,5 +744,29 @@ const styles = StyleSheet.create({
     letterSpacing: 0.05,
     color: '#E0E0E0', // Light gray text
     textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#B8B8B8',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 20,
+  },
+  loadingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    marginVertical: 7,
+    marginHorizontal: 8,
+    borderRadius: 14,
+    backgroundColor: '#2A2A2A',
+    alignSelf: 'flex-start',
+    maxWidth: '80%',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#B8B8B8',
+    marginLeft: 8,
   },
 });

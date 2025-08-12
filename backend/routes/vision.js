@@ -101,27 +101,32 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       ],
     });
 
-    // 6) Call OpenAI GPT-4o Vision
-    console.log('[vision] Calling OpenAI...');
-    const ai = await fetch('https://api.openai.com/v1/chat/completions', {
+    // 6) Call HuggingFace GPT-OSS-20B Vision
+    console.log('[vision] Calling HuggingFace GPT-OSS-20B...');
+    const ai = await fetch('https://api-inference.huggingface.co/models/openai/gpt-oss-20b', {
       method : 'POST',
       headers: {
-        Authorization : `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
+        Authorization : `Bearer ${process.env.HUGGINGFACE_API_KEY?.trim()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-oss-20b',
-        messages,
+        inputs: messages,
+        parameters: {
+          reasoning_effort: 'medium', // low, medium, high
+          max_new_tokens: 500,
+          temperature: 0.7,
+          do_sample: true
+        }
       }),
     }).then(r => r.json());
 
-    if (!ai.choices) {
-      console.error('[vision] OpenAI response:', ai);
-      throw new Error('No choices from OpenAI');
+    if (!ai || ai.error) {
+      console.error('[vision] HuggingFace response:', ai);
+      throw new Error(ai?.error || 'No response from HuggingFace');
     }
 
     const answer =
-      ai.choices?.[0]?.message?.content?.trim() ||
+      ai[0]?.generated_text?.trim() ||
       'Sorry, I could not analyse the image.';
 
     res.json({ answer, imageUrl });

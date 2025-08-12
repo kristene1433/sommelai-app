@@ -8,6 +8,10 @@
   ],
   "routes": [
     {
+      "src": "/web.css",
+      "dest": "/dist/web.css"
+    },
+    {
       "src": "/",
       "dest": "/dist/index.html"
     },

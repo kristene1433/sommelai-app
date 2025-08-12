@@ -12,21 +12,16 @@ router.post('/searchWineLocal', async (req, res) => {
   }
 
   try {
-    /* ---- Call OpenAI web-search model ---------------------- */
-    const gptResp = await fetch('https://api.openai.com/v1/chat/completions', {
+    /* ---- Call HuggingFace GPT-OSS-20B model ---------------------- */
+    const gptResp = await fetch('https://api-inference.huggingface.co/models/openai/gpt-oss-20b', {
       method : 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()}`,
+        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY && process.env.HUGGINGFACE_API_KEY.trim()}`,
 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-oss-20b',
-        web_search_options: {
-          user_location: { type:'approximate', approximate:{ country:'US' } },
-          search_context_size: 'low',
-        },
-        messages: [
+        inputs: [
           {
             role: 'system',
             content:
@@ -47,30 +42,20 @@ router.post('/searchWineLocal', async (req, res) => {
     });
 
     const gpt = await gptResp.json();
-    console.log('🔎 GPT raw:', JSON.stringify(gpt, null, 2));
+    console.log('🔎 GPT-OSS-20B raw:', JSON.stringify(gpt, null, 2));
 
     /* ---- Build results ------------------------------------ */
     let results = [];
 
-    /* 1️⃣ Try to parse JSON directly from message.content */
+    /* 1️⃣ Try to parse JSON directly from generated_text */
     try {
-      const parsed = JSON.parse(gpt.choices?.[0]?.message?.content || '{}');
+      const parsed = JSON.parse(gpt[0]?.generated_text || '{}');
       results = parsed.results || [];
 
-      /* Attach URLs from annotations (they appear in order) */
-      const annots = gpt.choices?.[0]?.message?.annotations || [];
-      annots
-        .filter(a => a.type === 'url_citation')
-        .forEach((a, idx) => {
-          if (results[idx]) results[idx].url = a.url_citation.url;
-        });
-
+      /* Note: HuggingFace doesn't have annotations like OpenAI, so we'll parse from text */
     } catch {
-      /* 2️⃣ Fallback: parse bullet blocks + add URLs by index */
-      const text   = gpt.choices?.[0]?.message?.content || '';
-      const urls   = (gpt.choices?.[0]?.message?.annotations || [])
-        .filter(a => a.type === 'url_citation')
-        .map(a => a.url_citation.url);
+      /* 2️⃣ Fallback: parse bullet blocks from generated text */
+      const text = gpt[0]?.generated_text || '';
 
       const blocks = text.split(/\n{2,}/).slice(0, 3);
       results = blocks.map((b, i) => {
