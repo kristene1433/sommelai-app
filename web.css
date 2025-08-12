@@ -1,0 +1,76 @@
+/* Web-specific fixes for React Native to Web conversion */
+
+/* Fix viewport and body */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Fix container sizing and centering */
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Fix login box sizing and positioning */
+.login-container {
+  width: 100%;
+  max-width: 350px;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* Fix input field sizing */
+input[type="email"], input[type="password"] {
+  width: 100%;
+  max-width: 300px;
+  height: 48px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+/* Fix button sizing */
+button {
+  width: 100%;
+  max-width: 300px;
+  height: 48px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+/* Fix background image sizing */
+.bg-image {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+
+/* Mobile-specific fixes */
+@media (max-width: 768px) {
+  .login-container {
+    max-width: 90%;
+    min-height: 280px;
+    padding: 20px;
+  }
+  
+  input[type="email"], input[type="password"], button {
+    max-width: 100%;
+  }
+}
