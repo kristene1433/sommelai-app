@@ -19,7 +19,7 @@ type LocalItem = {
   address?: string; url?: string;
 };
 
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
 function cleanAssistantResponse(raw: string) {
   return raw
