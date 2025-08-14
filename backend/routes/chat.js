@@ -1,6 +1,51 @@
 const express = require('express');
 const router = express.Router();
 
+// Test endpoint to verify HuggingFace API connectivity
+router.get('/test', async (req, res) => {
+  try {
+    console.log('[chat] Testing HuggingFace API connectivity...');
+    const testResponse = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY?.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: 'Hello, how are you?',
+        parameters: {
+          max_new_tokens: 50,
+          temperature: 0.7,
+        }
+      }),
+    });
+    
+    const data = await testResponse.json();
+    console.log('[chat] Test response:', data);
+    
+    if (testResponse.ok && data && data[0]?.generated_text) {
+      res.json({ 
+        success: true, 
+        message: 'HuggingFace API is working!',
+        testResponse: data[0].generated_text 
+      });
+    } else {
+      res.json({ 
+        success: false, 
+        message: 'HuggingFace API test failed',
+        error: data.error || 'Unknown error'
+      });
+    }
+  } catch (err) {
+    console.error('[chat] Test error:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Test failed',
+      error: err.message 
+    });
+  }
+});
+
 // Text-based chat endpoint using HuggingFace GPT-OSS-20B
 router.post('/somm', async (req, res) => {
   try {
@@ -52,7 +97,7 @@ router.post('/somm', async (req, res) => {
     }).then(r => r.json());
 
     if (!ai || ai.error) {
-      console.error('[chat] HuggingFace response:', ai);
+      console.error('[chat] HuggingFace API Error:', ai);
       throw new Error(ai?.error || 'No response from HuggingFace');
     }
 
