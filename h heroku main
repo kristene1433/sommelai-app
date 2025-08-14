@@ -1,0 +1,5 @@
+[33m01045be[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Add HuggingFace API test endpoint to diagnose connectivity issues
+[33md6788cc[m Fix HuggingFace API: revert to gpt-oss-20b and remove unsupported parameters
+[33m38473aa[m Fix BASE_URL for production deployment
+[33m95063a4[m[33m ([m[1;31mheroku/main[m[33m)[m fix api
+[33mb375c7c[m Update package-lock.json with backend dependencies

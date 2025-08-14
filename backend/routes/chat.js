@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
 
-// Lightweight test endpoint (keeps your existing test)
+// Lightweight test endpoint
 router.get('/test', async (req, res) => {
   try {
     const endpoint = process.env.HUGGINGFACE_ENDPOINT_URL;
@@ -31,7 +31,87 @@ router.get('/test', async (req, res) => {
   }
 });
 
-// main /somm handler
+// Helper: call HF endpoint trying two shapes, then OpenAI fallback
+async function callHfWithFallback(endpoint, apiKey, prompt, openaiModelName = 'openai/gpt-oss-20b') {
+  // 1) Try HF "inputs" format
+  try {
+    let resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inputs: prompt, parameters: { max_new_tokens: 500, temperature: 0.7 } }),
+    });
+
+    let text = await resp.text().catch(() => null);
+    if (resp.ok) {
+      // return parsed if possible
+      try { return { ok: true, body: JSON.parse(text) }; } catch (e) { return { ok: true, body: text }; }
+    }
+
+    // Not ok — log & try messages shape
+    console.error('[HF] inputs format failed', resp.status, text);
+
+    // 2) Try OpenAI-compatible "messages" shape
+    resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: openaiModelName,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 500,
+        temperature: 0.7,
+      }),
+    });
+
+    text = await resp.text().catch(() => null);
+    if (resp.ok) {
+      try { return { ok: true, body: JSON.parse(text) }; } catch (e) { return { ok: true, body: text }; }
+    }
+
+    // both HF attempts failed
+    return { ok: false, status: resp.status, body: text || 'No body from HF' };
+  } catch (err) {
+    console.error('[callHfWithFallback] error', err);
+    return { ok: false, status: 500, body: err.message || String(err) };
+  }
+}
+
+// helper: call OpenAI Chat Completions as fallback
+async function callOpenAI(prompt) {
+  try {
+    if (!process.env.OPENAI_API_KEY) return null;
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const oResp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'system', content: 'You are a helpful assistant.' }, { role: 'user', content: prompt }],
+        max_tokens: 500,
+        temperature: 0.7,
+      }),
+    });
+    if (!oResp.ok) {
+      const txt = await oResp.text().catch(() => null);
+      console.error('[callOpenAI] non-ok', oResp.status, txt);
+      return null;
+    }
+    const j = await oResp.json();
+    const text =
+      j?.choices?.[0]?.message?.content ||
+      j?.choices?.[0]?.text ||
+      j?.output?.[0]?.content?.[0]?.text ||
+      j?.output_text;
+    return text ? String(text).trim() : null;
+  } catch (e) {
+    console.error('[callOpenAI] error', e);
+    return null;
+  }
+}
+
+// /somm: text-based chat
 router.post('/somm', async (req, res) => {
   try {
     const { messages, usePreferences, preferences } = req.body;
@@ -49,7 +129,6 @@ router.post('/somm', async (req, res) => {
     } else {
       systemPrompt += 'USER PREFERENCES: None provided.\n';
     }
-
     systemPrompt += 'End with a question to keep chat going. No markdown. No numbered lists.';
 
     // Flatten messages to single prompt text
@@ -57,61 +136,55 @@ router.post('/somm', async (req, res) => {
     const prompt = fullMessages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
 
     const hfEndpoint = process.env.HUGGINGFACE_ENDPOINT_URL;
-    if (!hfEndpoint) return res.status(500).json({ error: 'HUGGINGFACE_ENDPOINT_URL not configured' });
+    if (!hfEndpoint || !/^https?:\/\//i.test(hfEndpoint)) {
+      console.error('[chat] HUGGINGFACE_ENDPOINT_URL missing or invalid:', hfEndpoint);
+      return res.status(500).json({
+        error: 'Server misconfiguration: HUGGINGFACE_ENDPOINT_URL must be set to a full absolute URL (https://...)'
+      });
+    }
 
-    // Call HF endpoint
-    const hfResp = await fetch(hfEndpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY || ''}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        // Use "inputs" for general compatibility; some endpoints accept "messages", but inputs is safe
-        inputs: prompt,
-        parameters: { max_new_tokens: 500, temperature: 0.7 },
-      }),
-    });
+    // Call HF with fallback attempts
+    const hfResult = await callHfWithFallback(hfEndpoint, process.env.HUGGINGFACE_API_KEY || '', prompt, 'openai/gpt-oss-20b');
 
-    const raw = await hfResp.text().catch(() => null);
+    if (hfResult.ok) {
+      // normalize many possible response shapes
+      const ai = hfResult.body;
+      // handle array or object shapes
+      let generated =
+        (Array.isArray(ai) && (ai[0]?.generated_text || ai[0]?.text || ai[0]?.output_text)) ||
+        ai?.generated_text ||
+        ai?.text ||
+        ai?.output_text ||
+        (typeof ai === 'string' && ai);
 
-    if (!hfResp.ok) {
-      console.error('[chat] HuggingFace endpoint error', hfResp.status, raw);
-
-      // Detect paused endpoint message
-      if (raw && /paused|No replicas|quota|insufficient/i.test(raw) && process.env.OPENAI_API_KEY) {
-        console.log('[chat] HF endpoint seems paused/blocked — falling back to OpenAI');
-        const openai = await callOpenAI(prompt);
-        if (openai) return res.json({ answer: openai });
-        return res.status(502).json({ error: 'HuggingFace failed and OpenAI fallback also failed' });
+      // Sometimes OpenAI-compatible endpoints return choices/output_text
+      if (!generated && ai?.choices?.[0]?.message?.content) {
+        generated = ai.choices[0].message.content;
+      }
+      if (!generated && ai?.choices?.[0]?.text) {
+        generated = ai.choices[0].text;
       }
 
-      // return HF error to client for visibility
-      return res.status(hfResp.status).json({ error: raw || 'Unknown HuggingFace error' });
+      if (generated && String(generated).trim().length) {
+        return res.json({ answer: String(generated).trim() });
+      }
+      // If HF succeeded but no text found, try OpenAI fallback
+    } else {
+      console.error('[chat] HF failed:', hfResult.status, hfResult.body);
     }
 
-    // Parse HF response
-    let aiResponse;
-    try { aiResponse = JSON.parse(raw); } catch (e) { aiResponse = raw; }
-
-    // Common HF shapes: [{generated_text:...}], {generated_text:...}, {text:...}, or straight string
-    const generated =
-      (Array.isArray(aiResponse) && (aiResponse[0]?.generated_text || aiResponse[0]?.text)) ||
-      aiResponse.generated_text ||
-      aiResponse.text ||
-      (typeof aiResponse === 'string' && aiResponse);
-
-    if (generated && String(generated).trim().length) {
-      return res.json({ answer: String(generated).trim() });
-    }
-
-    // If HF returned OK but no content, optionally fallback to OpenAI
+    // Final fallback: OpenAI (if configured)
     if (process.env.OPENAI_API_KEY) {
-      const openai = await callOpenAI(prompt);
-      if (openai) return res.json({ answer: openai });
+      const openaiAnswer = await callOpenAI(prompt);
+      if (openaiAnswer) return res.json({ answer: openaiAnswer });
     }
 
-    res.status(500).json({ error: 'No answer generated by HuggingFace endpoint' });
+    // No answer generated
+    if (hfResult && !hfResult.ok) {
+      return res.status(502).json({ error: `Hugging Face error: ${hfResult.status} ${hfResult.body}` });
+    }
+
+    return res.status(500).json({ error: 'No answer generated' });
   } catch (err) {
     console.error('[chat] error:', err);
     res.status(500).json({ error: err.stack || err.message || 'Chat error' });
@@ -119,33 +192,3 @@ router.post('/somm', async (req, res) => {
 });
 
 module.exports = router;
-
-// ---------------------- helpers ----------------------
-async function callOpenAI(prompt) {
-  try {
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-    const oResp = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'system', content: 'You are a helpful assistant.' }, { role: 'user', content: prompt }],
-        max_tokens: 500,
-        temperature: 0.7
-      })
-    });
-    const j = await oResp.json();
-    const text =
-      j?.choices?.[0]?.message?.content ||
-      j?.choices?.[0]?.text ||
-      j?.output?.[0]?.content?.[0]?.text ||
-      j?.output_text;
-    return text ? String(text).trim() : null;
-  } catch (e) {
-    console.error('[callOpenAI] error', e);
-    return null;
-  }
-}

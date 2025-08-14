@@ -1,3 +1,4 @@
+// WineChat.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, TextInput, Text, StyleSheet, ScrollView,
@@ -116,7 +117,6 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       setChatHistory(prev => [
         ...prev,
         { role: 'user', content: q, type: 'text' },
-        // Removed blank assistant message to prevent UI confusion
       ]);
     } catch {
       setResponse('Sorry, I could not retrieve local availability.');
@@ -180,9 +180,23 @@ export default function WineChat({ userPlan, userEmail }: Props) {
           preferences: prefs
         }),
       });
-      const data = await r.json();
-      
-      if (r.ok && data && data.answer) {
+
+      const text = await r.text().catch(() => '');
+      if (!r.ok) {
+        console.error('Backend non-OK response:', r.status, text);
+        setResponse(`⚠️ API Error (${r.status}): ${text || 'Unknown error'}`);
+        setChatHistory(prev => [
+          ...prev,
+          { role: 'user', content: question, type: 'text' },
+          { role: 'assistant', content: `⚠️ API Error (${r.status}): ${text || 'Unknown error'}`, type: 'text' },
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      // success branch
+      const data = text ? JSON.parse(text) : {};
+      if (data?.answer) {
         const content = cleanAssistantResponse(data.answer);
         setResponse(content);
         setChatHistory(prev => [
@@ -191,7 +205,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
           { role: 'assistant', content, type: 'text' },
         ]);
         setQuestion('');
-      } else if (data.error) {
+      } else if (data?.error) {
         console.error('Backend API Error:', data.error);
         setResponse(`⚠️ API Error: ${data.error || 'Unknown error'}`);
         setChatHistory(prev => [
@@ -258,8 +272,17 @@ export default function WineChat({ userPlan, userEmail }: Props) {
         method: 'POST',
         body: form,
       });
-      const json = await r.json();
-      if (r.ok) {
+
+      const text = await r.text().catch(() => '');
+      if (!r.ok) {
+        console.error('Vision API non-OK:', r.status, text);
+        Alert.alert('Vision error', text || `Status ${r.status}`);
+        setLoading(false);
+        return;
+      }
+
+      const json = text ? JSON.parse(text) : {};
+      if (json.answer) {
         const clean = cleanAssistantResponse(json.answer);
         setResponse(clean);
         setChatHistory(prev => [
@@ -272,7 +295,8 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       } else {
         Alert.alert('Vision error', json.error || 'Unable to analyze image');
       }
-    } catch {
+    } catch (err) {
+      console.error('Vision network error', err);
       Alert.alert('Network error', 'Could not reach server');
     }
     setLoading(false);
@@ -510,10 +534,11 @@ export default function WineChat({ userPlan, userEmail }: Props) {
   );
 }
 
+// (styles unchanged — copy from your original file)
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
-    backgroundColor: '#0A0A0A', // Very dark charcoal background
+    backgroundColor: '#0A0A0A',
   },
   content: {
     flex: 1,
@@ -525,7 +550,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 470,
-    backgroundColor: '#1E1E1E', // Dark slate
+    backgroundColor: '#1E1E1E',
     borderRadius: 24,
     padding: 26,
     shadowColor: '#000000',
@@ -535,14 +560,14 @@ const styles = StyleSheet.create({
     elevation: 10,
     marginVertical: 10,
     borderWidth: 1,
-    borderColor: '#2A2A2A', // Subtle border
+    borderColor: '#2A2A2A',
   },
   header: {
     fontSize: 27,
     fontWeight: '700',
     marginBottom: 19,
     textAlign: 'center',
-    color: '#E0E0E0', // Light gray text
+    color: '#E0E0E0',
     letterSpacing: 0.3,
     fontFamily: 'serif',
   },
@@ -554,25 +579,25 @@ const styles = StyleSheet.create({
     marginTop: -5,
   },
   prefsToggleText: {
-    color: '#B8B8B8', // Medium gray
+    color: '#B8B8B8',
     fontWeight: '600',
     fontSize: 16,
     marginRight: 12,
   },
   prefsOffNote: {
-    color: '#A0A0A0', // Light gray
+    color: '#A0A0A0',
     marginBottom: 7,
     fontWeight: '600',
     textAlign: 'center',
   },
   input: {
     borderWidth: 1.5,
-    borderColor: '#404040', // Medium gray border
+    borderColor: '#404040',
     borderRadius: 13,
     padding: 15,
     marginBottom: 12,
-    backgroundColor: '#2A2A2A', // Dark input background
-    color: '#E0E0E0', // Light gray text
+    backgroundColor: '#2A2A2A',
+    color: '#E0E0E0',
     fontSize: 16,
     minHeight: 56,
     textAlignVertical: 'top',
@@ -584,7 +609,7 @@ const styles = StyleSheet.create({
   },
   responseBox: {
     marginTop: 22,
-    backgroundColor: '#252525', // Darker slate
+    backgroundColor: '#252525',
     borderRadius: 15,
     padding: 17,
     shadowColor: '#000000',
@@ -596,7 +621,7 @@ const styles = StyleSheet.create({
   listingCard: {
     marginBottom: 14,
     borderRadius: 11,
-    backgroundColor: '#2A2A2A', // Dark slate
+    backgroundColor: '#2A2A2A',
     padding: 10,
     shadowColor: '#000000',
     shadowOpacity: 0.1,
@@ -607,17 +632,17 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#B8B8B8', // Medium gray
+    color: '#B8B8B8',
   },
   price: {
     fontSize: 15,
-    color: '#E0E0E0', // Light gray text
+    color: '#E0E0E0',
     fontWeight: 'bold',
     marginBottom: 2,
   },
   sub: {
     fontSize: 14,
-    color: '#A0A0A0', // Light gray
+    color: '#A0A0A0',
   },
   chatBox: {
     maxHeight: 400,
@@ -639,15 +664,15 @@ const styles = StyleSheet.create({
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#404040', // Medium gray
+    backgroundColor: '#404040',
   },
   assistantBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: '#2A2A2A', // Dark slate
+    backgroundColor: '#2A2A2A',
   },
   assistantItemBubble: {
     marginBottom: 7,
-    backgroundColor: '#252525', // Darker slate
+    backgroundColor: '#252525',
     borderRadius: 8,
     paddingVertical: 9,
     paddingHorizontal: 14,
@@ -656,24 +681,24 @@ const styles = StyleSheet.create({
   },
   pairingBubble: {
     marginBottom: 7,
-    backgroundColor: '#3A3A3A', // Darker slate
+    backgroundColor: '#3A3A3A',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 15,
     alignSelf: 'flex-start',
     maxWidth: '90%',
     borderLeftWidth: 5,
-    borderLeftColor: '#404040', // Medium gray
+    borderLeftColor: '#404040',
   },
   pairingText: {
     fontWeight: '700',
-    color: '#B8B8B8', // Medium gray
+    color: '#B8B8B8',
     fontSize: 16,
     fontStyle: 'italic',
   },
   chatText: {
     fontSize: 16,
-    color: '#E0E0E0', // Light gray text
+    color: '#E0E0E0',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -682,7 +707,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   buttonPrimary: {
-    backgroundColor: '#404040', // Medium gray
+    backgroundColor: '#404040',
     padding: 14,
     borderRadius: 13,
     alignItems: 'center',
@@ -695,10 +720,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#505050', // Lighter gray accent
+    borderColor: '#505050',
   },
   buttonSecondary: {
-    backgroundColor: '#2A2A2A', // Dark slate
+    backgroundColor: '#2A2A2A',
     padding: 14,
     borderRadius: 13,
     alignItems: 'center',
@@ -706,7 +731,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 3,
     borderWidth: 1.5,
-    borderColor: '#404040', // Medium gray border
+    borderColor: '#404040',
     shadowColor: '#000000',
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -714,7 +739,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buttonText: {
-    color: '#E0E0E0', // Light gray text
+    color: '#E0E0E0',
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 0.09,
@@ -737,7 +762,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.05,
-    color: '#E0E0E0', // Light gray text
+    color: '#E0E0E0',
     textAlign: 'center',
   },
   emptyStateText: {
