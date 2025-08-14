@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { HUGGINGFACE_API_KEY } from '@env';
 import {
   ScrollView,
   Text,
@@ -86,7 +87,7 @@ Answer **JSON only**:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${HUGGINGFACE_API_KEY?.trim()}`,
         },
         body: JSON.stringify({
           inputs: [

@@ -19,7 +19,7 @@ type LocalItem = {
   address?: string; url?: string;
 };
 
-const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
+const BASE_URL = 'http://localhost:5000';
 
 function cleanAssistantResponse(raw: string) {
   return raw
@@ -169,26 +169,21 @@ export default function WineChat({ userPlan, userEmail }: Props) {
     setLoading(true);
     setResponse('');
     try {
-      const r = await fetch('https://api-inference.huggingface.co/models/openai/gpt-oss-20b', {
+      const r = await fetch(`${BASE_URL}/api/chat/somm`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY?.trim()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          inputs: messages,
-          parameters: {
-            reasoning_effort: 'medium', // low, medium, high
-            max_new_tokens: 500,
-            temperature: 0.7,
-            do_sample: true
-          }
+          messages: messages,
+          usePreferences: usePreferences,
+          preferences: prefs
         }),
       });
       const data = await r.json();
       
-      if (r.ok && data && data[0]?.generated_text) {
-        const content = cleanAssistantResponse(data[0].generated_text);
+      if (r.ok && data && data.answer) {
+        const content = cleanAssistantResponse(data.answer);
         setResponse(content);
         setChatHistory(prev => [
           ...prev,
@@ -197,7 +192,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
         ]);
         setQuestion('');
       } else if (data.error) {
-        console.error('HuggingFace API Error:', data.error);
+        console.error('Backend API Error:', data.error);
         setResponse(`⚠️ API Error: ${data.error || 'Unknown error'}`);
         setChatHistory(prev => [
           ...prev,

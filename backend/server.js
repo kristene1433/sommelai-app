@@ -50,7 +50,11 @@ app.use('/api/preferences', preferenceRoutes);
 const visionRouter = require('./routes/vision');
 app.use('/api/vision', visionRouter); 
 
-// 6. Cancel subscription routes
+// 6. Chat routes
+const chatRouter = require('./routes/chat');
+app.use('/api/chat', chatRouter);
+
+// 7. Cancel subscription routes
 const cancelRoutes = require('./routes/cancel');  // or correct path
 app.use('/api/subscription', cancelRoutes);
 
