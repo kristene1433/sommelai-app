@@ -30,7 +30,7 @@ router.post('/searchWineLocal', async (req, res) => {
             content: `Find three stores near ZIP ${zip} that sell ${query}.`
           }
         ],
-        max_tokens: 500,
+        max_completion_tokens: 500,
         temperature: 0.2,
       }),
     });

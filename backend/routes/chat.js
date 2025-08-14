@@ -17,7 +17,7 @@ router.get('/test', async (req, res) => {
         messages: [
           { role: 'user', content: 'Hello, how are you?' }
         ],
-        max_tokens: 50,
+        max_completion_tokens: 50,
         temperature: 0.7,
       }),
     });
@@ -91,7 +91,7 @@ router.post('/somm', async (req, res) => {
       body: JSON.stringify({
         model: 'gpt-5-mini',
         messages: fullMessages,
-        max_tokens: 500,
+        max_completion_tokens: 500,
         temperature: 0.7,
       }),
     }).then(r => r.json());

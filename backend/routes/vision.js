@@ -115,7 +115,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       body: JSON.stringify({
         model: 'gpt-5-mini',
         messages: messages,
-        max_tokens: 500,
+        max_completion_tokens: 500,
         temperature: 0.7,
       }),
     }).then(r => r.json());
