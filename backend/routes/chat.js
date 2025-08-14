@@ -1,110 +1,117 @@
+// backend/routes/chat.js
 const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
 
-// Test endpoint to verify HuggingFace API connectivity
+// Lightweight test endpoint (keeps your existing test)
 router.get('/test', async (req, res) => {
   try {
-    console.log('[chat] Testing HuggingFace API connectivity...');
-    const testResponse = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+    const endpoint = process.env.HUGGINGFACE_ENDPOINT_URL;
+    if (!endpoint) return res.status(500).json({ error: 'HUGGINGFACE_ENDPOINT_URL not set' });
+
+    const resp = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY?.trim()}`,
+        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY || ''}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        inputs: 'Hello, how are you?',
-        parameters: {
-          max_new_tokens: 50,
-          temperature: 0.7,
-        }
-      }),
+      body: JSON.stringify({ inputs: 'Hello from backend test' }),
     });
-    
-    const data = await testResponse.json();
-    console.log('[chat] Test response:', data);
-    
-    if (testResponse.ok && data && data[0]?.generated_text) {
-      res.json({ 
-        success: true, 
-        message: 'HuggingFace API is working!',
-        testResponse: data[0].generated_text 
-      });
-    } else {
-      res.json({ 
-        success: false, 
-        message: 'HuggingFace API test failed',
-        error: data.error || 'Unknown error'
-      });
+
+    const text = await resp.text();
+    try {
+      const json = JSON.parse(text);
+      return res.status(resp.status).json({ ok: resp.ok, data: json });
+    } catch (e) {
+      return res.status(resp.status).send(text);
     }
   } catch (err) {
-    console.error('[chat] Test error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Test failed',
-      error: err.message 
-    });
+    console.error('[chat/test] error', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Text-based chat endpoint using HuggingFace GPT-OSS-20B
+// main /somm handler
 router.post('/somm', async (req, res) => {
   try {
     const { messages, usePreferences, preferences } = req.body;
-
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Messages array is required' });
     }
 
-    // Build system prompt with preferences if provided
+    // Build system prompt with preferences
     let systemPrompt = 'You are a master sommelier and friendly conversationalist. ' +
       'The conversation is about a specific wine identified earlier. ' +
-      'For every follow-up question, answer as if referring to that wine unless the user explicitly changes topic. ';
+      'For every follow-up question, answer as if referring to that wine unless the user explicitly changes topic.\n';
 
     if (usePreferences && preferences) {
-      systemPrompt += `\nUSER PREFERENCES:\n- Wine Types: ${preferences.wineTypes?.join(', ') || 'any'}\n- Flavor Profiles: ${preferences.flavorProfiles?.join(', ') || 'any'}\n`;
+      systemPrompt += `USER PREFERENCES:\n- Wine Types: ${preferences.wineTypes?.join(', ') || 'any'}\n- Flavor Profiles: ${preferences.flavorProfiles?.join(', ') || 'any'}\n`;
     } else {
-      systemPrompt += '\nUSER PREFERENCES: None provided.\n';
+      systemPrompt += 'USER PREFERENCES: None provided.\n';
     }
 
-    systemPrompt += '\nInstructions:\n' +
-      '- Always answer about the known wine unless told otherwise.\n' +
-      '- Recommend 2–3 varietals when asked.\n' +
-      '- Add Perfect Pairing section (no bullets, no numbers, no markdown—just conversational style).\n' +
-      '- End with a question to keep chat going.\n' +
-      '- Be knowledgeable, approachable, charming. No asterisks, no markdown, no numbered lists.';
+    systemPrompt += 'End with a question to keep chat going. No markdown. No numbered lists.';
 
-    // Add system message at the beginning
-    const fullMessages = [
-      { role: 'system', content: systemPrompt },
-      ...messages
-    ];
+    // Flatten messages to single prompt text
+    const fullMessages = [{ role: 'system', content: systemPrompt }, ...messages];
+    const prompt = fullMessages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
 
-    console.log('[chat] Calling HuggingFace GPT-OSS-20B...');
-    const ai = await fetch('https://api-inference.huggingface.co/models/openai/gpt-oss-20b', {
+    const hfEndpoint = process.env.HUGGINGFACE_ENDPOINT_URL;
+    if (!hfEndpoint) return res.status(500).json({ error: 'HUGGINGFACE_ENDPOINT_URL not configured' });
+
+    // Call HF endpoint
+    const hfResp = await fetch(hfEndpoint, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY?.trim()}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY || ''}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        inputs: fullMessages,
-        parameters: {
-          max_new_tokens: 500,
-          temperature: 0.7,
-          do_sample: true
-        }
+        // Use "inputs" for general compatibility; some endpoints accept "messages", but inputs is safe
+        inputs: prompt,
+        parameters: { max_new_tokens: 500, temperature: 0.7 },
       }),
-    }).then(r => r.json());
+    });
 
-    if (!ai || ai.error) {
-      console.error('[chat] HuggingFace API Error:', ai);
-      throw new Error(ai?.error || 'No response from HuggingFace');
+    const raw = await hfResp.text().catch(() => null);
+
+    if (!hfResp.ok) {
+      console.error('[chat] HuggingFace endpoint error', hfResp.status, raw);
+
+      // Detect paused endpoint message
+      if (raw && /paused|No replicas|quota|insufficient/i.test(raw) && process.env.OPENAI_API_KEY) {
+        console.log('[chat] HF endpoint seems paused/blocked — falling back to OpenAI');
+        const openai = await callOpenAI(prompt);
+        if (openai) return res.json({ answer: openai });
+        return res.status(502).json({ error: 'HuggingFace failed and OpenAI fallback also failed' });
+      }
+
+      // return HF error to client for visibility
+      return res.status(hfResp.status).json({ error: raw || 'Unknown HuggingFace error' });
     }
 
-    const answer = ai[0]?.generated_text?.trim() || 'Sorry, I could not generate a response.';
+    // Parse HF response
+    let aiResponse;
+    try { aiResponse = JSON.parse(raw); } catch (e) { aiResponse = raw; }
 
-    res.json({ answer });
+    // Common HF shapes: [{generated_text:...}], {generated_text:...}, {text:...}, or straight string
+    const generated =
+      (Array.isArray(aiResponse) && (aiResponse[0]?.generated_text || aiResponse[0]?.text)) ||
+      aiResponse.generated_text ||
+      aiResponse.text ||
+      (typeof aiResponse === 'string' && aiResponse);
+
+    if (generated && String(generated).trim().length) {
+      return res.json({ answer: String(generated).trim() });
+    }
+
+    // If HF returned OK but no content, optionally fallback to OpenAI
+    if (process.env.OPENAI_API_KEY) {
+      const openai = await callOpenAI(prompt);
+      if (openai) return res.json({ answer: openai });
+    }
+
+    res.status(500).json({ error: 'No answer generated by HuggingFace endpoint' });
   } catch (err) {
     console.error('[chat] error:', err);
     res.status(500).json({ error: err.stack || err.message || 'Chat error' });
@@ -112,3 +119,33 @@ router.post('/somm', async (req, res) => {
 });
 
 module.exports = router;
+
+// ---------------------- helpers ----------------------
+async function callOpenAI(prompt) {
+  try {
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const oResp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'system', content: 'You are a helpful assistant.' }, { role: 'user', content: prompt }],
+        max_tokens: 500,
+        temperature: 0.7
+      })
+    });
+    const j = await oResp.json();
+    const text =
+      j?.choices?.[0]?.message?.content ||
+      j?.choices?.[0]?.text ||
+      j?.output?.[0]?.content?.[0]?.text ||
+      j?.output_text;
+    return text ? String(text).trim() : null;
+  } catch (e) {
+    console.error('[callOpenAI] error', e);
+    return null;
+  }
+}
