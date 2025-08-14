@@ -6,7 +6,7 @@ const router = express.Router();
 router.get('/test', async (req, res) => {
   try {
     console.log('[chat] Testing OpenAI GPT-5 mini connectivity...');
-    const testResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const testResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
@@ -14,22 +14,23 @@ router.get('/test', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'gpt-5-mini',
-        messages: [
-          { role: 'user', content: 'Hello, how are you?' }
+        input: [
+          {
+            role: 'user',
+            content: 'Hello, how are you?'
+          }
         ],
-        max_completion_tokens: 50,
-        temperature: 0.7,
       }),
     });
     
     const data = await testResponse.json();
     console.log('[chat] Test response:', data);
     
-    if (testResponse.ok && data && data.choices && data.choices[0]?.message?.content) {
+    if (testResponse.ok && data && data.output_text) {
       res.json({ 
         success: true, 
         message: 'OpenAI GPT-5 mini is working!',
-        testResponse: data.choices[0].message.content 
+        testResponse: data.output_text 
       });
     } else {
       res.json({ 
@@ -82,7 +83,7 @@ router.post('/somm', async (req, res) => {
     ];
 
     console.log('[chat] Calling OpenAI GPT-5 mini...');
-    const ai = await fetch('https://api.openai.com/v1/chat/completions', {
+    const ai = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
@@ -90,9 +91,7 @@ router.post('/somm', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'gpt-5-mini',
-        messages: fullMessages,
-        max_completion_tokens: 500,
-        temperature: 0.7,
+        input: fullMessages,
       }),
     }).then(r => r.json());
 
@@ -101,7 +100,7 @@ router.post('/somm', async (req, res) => {
       throw new Error(ai?.error?.message || 'No response from OpenAI');
     }
 
-    const answer = ai.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not generate a response.';
+    const answer = ai.output_text?.trim() || 'Sorry, I could not generate a response.';
 
     res.json({ answer });
   } catch (err) {

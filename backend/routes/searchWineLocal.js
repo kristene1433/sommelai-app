@@ -12,7 +12,7 @@ router.post('/searchWineLocal', async (req, res) => {
 
   try {
     /* ---- Call OpenAI GPT-5 mini model ---------------------- */
-    const gptResp = await fetch('https://api.openai.com/v1/chat/completions', {
+    const gptResp = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -20,7 +20,7 @@ router.post('/searchWineLocal', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'gpt-5-mini',
-        messages: [
+        input: [
           {
             role: 'system',
             content: 'You are a wine expert helping find local wine stores. Return ONLY valid JSON matching {"results":[{name,price,store,address,url}]}. No markdown, prose, or extra keys. Choose retailers physically located within 25 miles of the ZIP code. Do NOT list generic online shops unless none are local.'
@@ -30,8 +30,6 @@ router.post('/searchWineLocal', async (req, res) => {
             content: `Find three stores near ZIP ${zip} that sell ${query}.`
           }
         ],
-        max_completion_tokens: 500,
-        temperature: 0.2,
       }),
     });
 
@@ -41,16 +39,16 @@ router.post('/searchWineLocal', async (req, res) => {
     /* ---- Build results ------------------------------------ */
     let results = [];
 
-    /* 1️⃣ Try to parse JSON directly from message content */
+    /* 1️⃣ Try to parse JSON directly from output_text */
     try {
-      const content = gpt.choices?.[0]?.message?.content || '';
+      const content = gpt.output_text || '';
       const parsed = JSON.parse(content);
       results = parsed.results || [];
 
       /* Note: OpenAI GPT-5 mini provides structured responses, so we can parse from text */
     } catch {
       /* 2️⃣ Fallback: parse bullet blocks from generated text */
-      const text = gpt.choices?.[0]?.message?.content || '';
+      const text = gpt.output_text || '';
 
       const blocks = text.split(/\n{2,}/).slice(0, 3);
       results = blocks.map((b, i) => {

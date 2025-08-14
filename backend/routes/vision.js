@@ -106,7 +106,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
 
-    const ai = await fetch('https://api.openai.com/v1/chat/completions', {
+    const ai = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
@@ -114,9 +114,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       },
       body: JSON.stringify({
         model: 'gpt-5-mini',
-        messages: messages,
-        max_completion_tokens: 500,
-        temperature: 0.7,
+        input: messages,
       }),
     }).then(r => r.json());
 
@@ -125,7 +123,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       throw new Error(ai?.error?.message || 'No response from OpenAI');
     }
 
-    const answer = ai.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not analyze the image.';
+    const answer = ai.output_text?.trim() || 'Sorry, I could not analyze the image.';
 
     console.log('[vision] GPT-5 mini analysis successful');
     return res.json({ answer, imageUrl });

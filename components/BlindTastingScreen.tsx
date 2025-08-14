@@ -83,7 +83,7 @@ Answer **JSON only**:
 `.trim();
 
     try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      const res = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,19 +91,17 @@ Answer **JSON only**:
         },
         body: JSON.stringify({
           model: 'gpt-5-mini',
-          messages: [
+          input: [
             { role: 'system', content: 'You are a concise WSET examiner.' },
             { role: 'user', content: prompt },
           ],
-          max_completion_tokens: 300,
-          temperature: 0.2,
         }),
       });
 
       const data = await res.json();
 
-      if (data && data.choices && data.choices[0]?.message?.content) {
-        const text = data.choices[0].message.content.trim();
+      if (data && data.output_text) {
+        const text = data.output_text.trim();
 
         setAiReply(text || null);
 
@@ -144,7 +142,7 @@ Answer **JSON only**:
   const askSommelier = async (question: string) => {
     try {
       setIsLoading(true);
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      const res = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +150,7 @@ Answer **JSON only**:
         },
         body: JSON.stringify({
           model: 'gpt-5-mini',
-          messages: [
+          input: [
             {
               role: 'system',
               content: 'You are a master sommelier helping with blind wine tasting. Provide detailed analysis and guidance.'
@@ -162,8 +160,6 @@ Answer **JSON only**:
               content: question
             }
           ],
-          max_completion_tokens: 500,
-          temperature: 0.7,
         }),
       });
 
@@ -172,7 +168,7 @@ Answer **JSON only**:
       }
 
       const data = await res.json();
-      const answer = data.choices?.[0]?.message?.content || 'No answer returned';
+      const answer = data.output_text || 'No answer returned';
       setAiReply(answer);
     } catch (error) {
       console.error('Error asking sommelier:', error);
