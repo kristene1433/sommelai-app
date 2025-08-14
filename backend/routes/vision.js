@@ -112,7 +112,6 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       body: JSON.stringify({
         inputs: messages,
         parameters: {
-          reasoning_effort: 'medium', // low, medium, high
           max_new_tokens: 500,
           temperature: 0.7,
           do_sample: true

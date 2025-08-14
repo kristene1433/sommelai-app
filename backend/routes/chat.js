@@ -44,7 +44,6 @@ router.post('/somm', async (req, res) => {
       body: JSON.stringify({
         inputs: fullMessages,
         parameters: {
-          reasoning_effort: 'medium',
           max_new_tokens: 500,
           temperature: 0.7,
           do_sample: true
