@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const fetch = require('node-fetch');
 
 // Test endpoint to verify HuggingFace API connectivity
 router.get('/test', async (req, res) => {
