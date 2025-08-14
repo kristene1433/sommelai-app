@@ -1,7 +1,6 @@
 // routes/searchWineLocal.js  (CommonJS)
 const express = require('express');
 const router  = express.Router();
-const fetch   = (...a) => import('node-fetch').then(({ default:f }) => f(...a));
 require('dotenv').config();
 
 /* ----------------------------------------------------------- */
@@ -12,50 +11,46 @@ router.post('/searchWineLocal', async (req, res) => {
   }
 
   try {
-    /* ---- Call HuggingFace GPT-OSS-20B model ---------------------- */
-    const gptResp = await fetch('https://api-inference.huggingface.co/models/openai/gpt-oss-20b', {
-      method : 'POST',
+    /* ---- Call OpenAI GPT-5 mini model ---------------------- */
+    const gptResp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY && process.env.HUGGINGFACE_API_KEY.trim()}`,
-
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()}`,
       },
       body: JSON.stringify({
-        inputs: [
+        model: 'gpt-5-mini',
+        messages: [
           {
             role: 'system',
-            content:
-              'Return ONLY valid JSON matching '
-            + '{"results":[{name,price,store,address,url}]} . '
-            + 'No markdown, prose, or extra keys.'
-            + 'Return ONLY valid JSON exactly matching '
-            + '{"results":[{name,price,store,address,url}]}. ' 
-            + 'Choose retailers physically located within 25 miles of ZIP ' 
-            + zip + '. Do NOT list generic online shops unless none are local.',  
+            content: 'You are a wine expert helping find local wine stores. Return ONLY valid JSON matching {"results":[{name,price,store,address,url}]}. No markdown, prose, or extra keys. Choose retailers physically located within 25 miles of the ZIP code. Do NOT list generic online shops unless none are local.'
           },
           {
             role: 'user',
-            content: `Find three stores near ZIP ${zip} that sell ${query}.`,
-          },
+            content: `Find three stores near ZIP ${zip} that sell ${query}.`
+          }
         ],
+        max_tokens: 500,
+        temperature: 0.2,
       }),
     });
 
     const gpt = await gptResp.json();
-    console.log('🔎 GPT-OSS-20B raw:', JSON.stringify(gpt, null, 2));
+    console.log('🔎 GPT-5 mini raw:', JSON.stringify(gpt, null, 2));
 
     /* ---- Build results ------------------------------------ */
     let results = [];
 
-    /* 1️⃣ Try to parse JSON directly from generated_text */
+    /* 1️⃣ Try to parse JSON directly from message content */
     try {
-      const parsed = JSON.parse(gpt[0]?.generated_text || '{}');
+      const content = gpt.choices?.[0]?.message?.content || '';
+      const parsed = JSON.parse(content);
       results = parsed.results || [];
 
-      /* Note: HuggingFace doesn't have annotations like OpenAI, so we'll parse from text */
+      /* Note: OpenAI GPT-5 mini provides structured responses, so we can parse from text */
     } catch {
       /* 2️⃣ Fallback: parse bullet blocks from generated text */
-      const text = gpt[0]?.generated_text || '';
+      const text = gpt.choices?.[0]?.message?.content || '';
 
       const blocks = text.split(/\n{2,}/).slice(0, 3);
       results = blocks.map((b, i) => {
@@ -67,7 +62,7 @@ router.post('/searchWineLocal', async (req, res) => {
           price  : m ? m[2]        : '?',
           store  : m ? m[3].trim() : '',
           address: lines[1]?.trim() || '',
-          url    : urls[i] || lines.find(l => /^https?:\/\//i.test(l))?.trim() || '',
+          url    : lines.find(l => /^https?:\/\//i.test(l))?.trim() || '',
         };
       });
     }

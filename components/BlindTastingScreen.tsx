@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HUGGINGFACE_API_KEY } from '@env';
+import { OPENAI_API_KEY } from '@env';
 import {
   ScrollView,
   Text,
@@ -83,30 +83,27 @@ Answer **JSON only**:
 `.trim();
 
     try {
-      const res = await fetch('https://api-inference.huggingface.co/models/openai/gpt-oss-20b', {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${HUGGINGFACE_API_KEY?.trim()}`,
+          Authorization: `Bearer ${OPENAI_API_KEY?.trim()}`,
         },
         body: JSON.stringify({
-          inputs: [
+          model: 'gpt-5-mini',
+          messages: [
             { role: 'system', content: 'You are a concise WSET examiner.' },
             { role: 'user', content: prompt },
           ],
-          parameters: {
-            reasoning_effort: 'medium',
-            max_new_tokens: 300,
-            temperature: 0.2,
-            do_sample: true
-          }
+          max_tokens: 300,
+          temperature: 0.2,
         }),
       });
 
       const data = await res.json();
 
-      if (data && data[0]?.generated_text) {
-        const text = data[0].generated_text?.trim();
+      if (data && data.choices && data.choices[0]?.message?.content) {
+        const text = data.choices[0].message.content.trim();
 
         setAiReply(text || null);
 
@@ -139,6 +136,47 @@ Answer **JSON only**:
       console.error(err);
       setAiReply('❌ Network / API error');
       setParsedReply(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const askSommelier = async (question: string) => {
+    try {
+      setIsLoading(true);
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY?.trim()}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-5-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a master sommelier helping with blind wine tasting. Provide detailed analysis and guidance.'
+            },
+            {
+              role: 'user',
+              content: question
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const answer = data.choices?.[0]?.message?.content || 'No answer returned';
+      setAiReply(answer);
+    } catch (error) {
+      console.error('Error asking sommelier:', error);
+      setAiReply('Sorry, I encountered an error. Please try again.');
     } finally {
       setIsLoading(false);
     }

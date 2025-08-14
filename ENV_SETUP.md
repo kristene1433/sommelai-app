@@ -1,27 +1,47 @@
-# Environment Variables Setup
+# Environment Setup for SommelAI App
 
-## Required API Keys
+## Required Environment Variables
 
-You need to create a `.env` file in your project root with the following variables:
+Create a `.env` file in your project root with the following variables:
 
 ```bash
-# OpenAI API Key (for text-to-speech)
+# OpenAI API Key (for GPT-5 mini chat and vision)
 OPENAI_API_KEY=your_openai_api_key_here
 
-# HuggingFace API Key (for GPT-OSS-20b chat)
-HUGGINGFACE_API_KEY=your_huggingface_api_key_here
+# MongoDB Connection String
+MONGODB_URI=your_mongodb_connection_string_here
+
+# AWS S3 Configuration (for image storage)
+AWS_ACCESS_KEY_ID=your_aws_access_key_id_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key_here
+AWS_REGION=your_aws_region_here
+BUCKET=your_s3_bucket_name_here
+
+# Stripe Configuration (for payments)
+STRIPE_SECRET_KEY=your_stripe_secret_key_here
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
 ```
 
-## How to get the keys:
+## How to Get These Keys
 
 1. **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
-2. **HuggingFace API Key**: Get from [HuggingFace Settings](https://huggingface.co/settings/tokens)
+   - Required for: Chat functionality (GPT-5 mini), Image analysis (GPT-5 mini vision)
+   - Cost: $0.25 per 1M input tokens, $2.00 per 1M output tokens
 
-## Important Notes:
+2. **MongoDB URI**: Get from [MongoDB Atlas](https://cloud.mongodb.com/)
+   - Required for: User data, preferences, wine journal entries
 
-- The `.env` file is already in `.gitignore` so it won't be committed
-- You need both keys because:
-  - **HuggingFace**: Used for the main chat functionality (GPT-OSS-20b)
-  - **OpenAI**: Used for text-to-speech features
-- After creating the `.env` file, restart your development server
+3. **AWS S3**: Get from [AWS Console](https://aws.amazon.com/s3/)
+   - Required for: Storing wine bottle images and menu photos
+
+4. **Stripe**: Get from [Stripe Dashboard](https://dashboard.stripe.com/)
+   - Required for: Payment processing and subscription management
+
+## Model Information
+
+- **GPT-5 mini**: Used for all chat and vision functionality
+  - Fast, cost-effective, always available
+  - 400K context window, 128K max output tokens
+  - May 31, 2024 knowledge cutoff
+  - Supports images, text, and structured outputs
 
