@@ -196,8 +196,11 @@ export default function WineChat({ userPlan, userEmail }: Props) {
 
       // success branch
       const data = text ? JSON.parse(text) : {};
-      if (data?.answer) {
-        const content = cleanAssistantResponse(data.answer);
+      console.log('Backend response data:', data); // Debug log
+      
+      if (data?.answer || data?.output_text) {
+        const responseText = data.answer || data.output_text;
+        const content = cleanAssistantResponse(responseText);
         setResponse(content);
         setChatHistory(prev => [
           ...prev,
@@ -282,8 +285,11 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       }
 
       const json = text ? JSON.parse(text) : {};
-      if (json.answer) {
-        const clean = cleanAssistantResponse(json.answer);
+      console.log('Vision API response:', json); // Debug log
+      
+      if (json.answer || json.output_text) {
+        const responseText = json.answer || json.output_text;
+        const clean = cleanAssistantResponse(responseText);
         setResponse(clean);
         setChatHistory(prev => [
           ...prev,
