@@ -39,16 +39,51 @@ router.post('/searchWineLocal', async (req, res) => {
     /* ---- Build results ------------------------------------ */
     let results = [];
 
-    /* 1️⃣ Try to parse JSON directly from output_text */
+    /* 1️⃣ Try to parse JSON directly from output array */
     try {
-      const content = gpt.output_text || '';
+      let content = '';
+      
+      if (gpt.output && Array.isArray(gpt.output)) {
+        // Look for the message type output that contains the text
+        const messageOutput = gpt.output.find(item => item.type === 'message' && item.content);
+        if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
+          // Find the text content
+          const textContent = messageOutput.content.find(item => item.type === 'text');
+          if (textContent && textContent.text) {
+            content = textContent.text.trim();
+          }
+        }
+      }
+      
+      // Fallback to output_text if available
+      if (!content && gpt.output_text) {
+        content = gpt.output_text.trim();
+      }
+      
       const parsed = JSON.parse(content);
       results = parsed.results || [];
 
       /* Note: OpenAI GPT-5 mini provides structured responses, so we can parse from text */
     } catch {
       /* 2️⃣ Fallback: parse bullet blocks from generated text */
-      const text = gpt.output_text || '';
+      let text = '';
+      
+      if (gpt.output && Array.isArray(gpt.output)) {
+        // Look for the message type output that contains the text
+        const messageOutput = gpt.output.find(item => item.type === 'message' && item.content);
+        if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
+          // Find the text content
+          const textContent = messageOutput.content.find(item => item.type === 'text');
+          if (textContent && textContent.text) {
+            text = textContent.text.trim();
+          }
+        }
+      }
+      
+      // Fallback to output_text if available
+      if (!text && gpt.output_text) {
+        text = gpt.output_text.trim();
+      }
 
       const blocks = text.split(/\n{2,}/).slice(0, 3);
       results = blocks.map((b, i) => {

@@ -123,7 +123,25 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       throw new Error(ai?.error?.message || 'No response from OpenAI');
     }
 
-    const answer = ai.output_text?.trim() || 'Sorry, I could not analyze the image.';
+    // Extract text from GPT-5 mini response format
+    let answer = 'Sorry, I could not analyze the image.';
+    
+    if (ai.output && Array.isArray(ai.output)) {
+      // Look for the message type output that contains the text
+      const messageOutput = ai.output.find(item => item.type === 'message' && item.content);
+      if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
+        // Find the text content
+        const textContent = messageOutput.content.find(item => item.type === 'text');
+        if (textContent && textContent.text) {
+          answer = textContent.text.trim();
+        }
+      }
+    }
+    
+    // Fallback to output_text if available
+    if (answer === 'Sorry, I could not analyze the image.' && ai.output_text) {
+      answer = ai.output_text.trim();
+    }
 
     console.log('[vision] GPT-5 mini analysis successful');
     return res.json({ answer, imageUrl });

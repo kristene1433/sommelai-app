@@ -26,11 +26,31 @@ router.get('/test', async (req, res) => {
     const data = await testResponse.json();
     console.log('[chat] Test response:', data);
     
-    if (testResponse.ok && data && data.output_text) {
+    if (testResponse.ok && data && data.output) {
+      // Extract text from GPT-5 mini response format
+      let testResponseText = 'No response text found';
+      
+      if (data.output && Array.isArray(data.output)) {
+        // Look for the message type output that contains the text
+        const messageOutput = data.output.find(item => item.type === 'message' && item.content);
+        if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
+          // Find the text content
+          const textContent = messageOutput.content.find(item => item.type === 'text');
+          if (textContent && textContent.text) {
+            testResponseText = textContent.text.trim();
+          }
+        }
+      }
+      
+      // Fallback to output_text if available
+      if (testResponseText === 'No response text found' && data.output_text) {
+        testResponseText = data.output_text.trim();
+      }
+      
       res.json({ 
         success: true, 
         message: 'OpenAI GPT-5 mini is working!',
-        testResponse: data.output_text 
+        testResponse: testResponseText 
       });
     } else {
       res.json({ 
@@ -100,7 +120,25 @@ router.post('/somm', async (req, res) => {
       throw new Error(ai?.error?.message || 'No response from OpenAI');
     }
 
-    const answer = ai.output_text?.trim() || 'Sorry, I could not generate a response.';
+    // Extract text from GPT-5 mini response format
+    let answer = 'Sorry, I could not generate a response.';
+    
+    if (ai.output && Array.isArray(ai.output)) {
+      // Look for the message type output that contains the text
+      const messageOutput = ai.output.find(item => item.type === 'message' && item.content);
+      if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
+        // Find the text content
+        const textContent = messageOutput.content.find(item => item.type === 'text');
+        if (textContent && textContent.text) {
+          answer = textContent.text.trim();
+        }
+      }
+    }
+    
+    // Fallback to output_text if available
+    if (answer === 'Sorry, I could not generate a response.' && ai.output_text) {
+      answer = ai.output_text.trim();
+    }
 
     res.json({ answer });
   } catch (err) {

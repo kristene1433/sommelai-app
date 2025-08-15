@@ -100,8 +100,26 @@ Answer **JSON only**:
 
       const data = await res.json();
 
-      if (data && data.output_text) {
-        const text = data.output_text.trim();
+      if (data && data.output) {
+        // Extract text from GPT-5 mini response format
+        let text = '';
+        
+        if (data.output && Array.isArray(data.output)) {
+          // Look for the message type output that contains the text
+          const messageOutput = data.output.find(item => item.type === 'message' && item.content);
+          if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
+            // Find the text content
+            const textContent = messageOutput.content.find(item => item.type === 'text');
+            if (textContent && textContent.text) {
+              text = textContent.text.trim();
+            }
+          }
+        }
+        
+        // Fallback to output_text if available
+        if (!text && data.output_text) {
+          text = data.output_text.trim();
+        }
 
         setAiReply(text || null);
 
@@ -168,7 +186,27 @@ Answer **JSON only**:
       }
 
       const data = await res.json();
-      const answer = data.output_text || 'No answer returned';
+      
+      // Extract text from GPT-5 mini response format
+      let answer = 'No answer returned';
+      
+      if (data.output && Array.isArray(data.output)) {
+        // Look for the message type output that contains the text
+        const messageOutput = data.output.find(item => item.type === 'message' && item.content);
+        if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
+          // Find the text content
+          const textContent = messageOutput.content.find(item => item.type === 'text');
+          if (textContent && textContent.text) {
+            answer = textContent.text.trim();
+          }
+        }
+      }
+      
+      // Fallback to output_text if available
+      if (answer === 'No answer returned' && data.output_text) {
+        answer = data.output_text.trim();
+      }
+      
       setAiReply(answer);
     } catch (error) {
       console.error('Error asking sommelier:', error);
