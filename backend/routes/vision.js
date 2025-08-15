@@ -83,7 +83,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
           (previousWineDescription ? `\n\nPrevious wine context: ${previousWineDescription}` : '') +
           `\n\nQuestion: ${userQuestion}`
         },
-        { type: 'input_image', image_url: { url: imageUrl } },
+        { type: 'input_image', image_url: imageUrl },
       ],
     });
 
