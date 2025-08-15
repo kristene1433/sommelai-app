@@ -70,32 +70,20 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
         ? req.body.previousWineDescription.trim()
         : null;
 
-    // 5) Build messages for OpenAI GPT-5 mini
+    // 5) Build messages for OpenAI GPT-5 mini vision API
     const messages = [];
 
-    messages.push({
-      role: 'system',
-      content:
-        'You are a master sommelier and visual expert. ' +
-        'Analyze the image of the wine or menu provided and answer the user question. ' +
-        'If previous wine context is provided, use it to inform your answers and keep conversation consistent. ' +
-        'Do NOT guess if unsure; ask for clarification politely. ' +
-        'Be knowledgeable, approachable, and charming in your responses.',
-    });
-
-    if (previousWineDescription) {
-      messages.push({
-        role: 'assistant',
-        content: previousWineDescription,
-      });
-    }
-
-    // Use OpenAI's vision format with image_url
+    // Add system prompt
     messages.push({
       role: 'user',
       content: [
-        { type: 'text', text: userQuestion },
-        { type: 'image_url', image_url: { url: imageUrl } },
+        { 
+          type: 'input_text', 
+          text: 'You are a master sommelier and visual expert. Analyze the image of the wine or menu provided and answer the user question. If previous wine context is provided, use it to inform your answers and keep conversation consistent. Do NOT guess if unsure; ask for clarification politely. Be knowledgeable, approachable, and charming in your responses.' + 
+          (previousWineDescription ? `\n\nPrevious wine context: ${previousWineDescription}` : '') +
+          `\n\nQuestion: ${userQuestion}`
+        },
+        { type: 'input_image', image_url: { url: imageUrl } },
       ],
     });
 
