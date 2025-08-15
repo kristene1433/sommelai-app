@@ -108,8 +108,8 @@ Answer **JSON only**:
           // Look for the message type output that contains the text
           const messageOutput = data.output.find(item => item.type === 'message' && item.content);
           if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
-            // Find the text content
-            const textContent = messageOutput.content.find(item => item.type === 'text');
+            // Find the text content - GPT-5 mini uses 'output_text' type
+            const textContent = messageOutput.content.find(item => item.type === 'output_text');
             if (textContent && textContent.text) {
               text = textContent.text.trim();
             }
@@ -194,8 +194,11 @@ Answer **JSON only**:
         // Look for the message type output that contains the text
         const messageOutput = data.output.find(item => item.type === 'message' && item.content);
         if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
-          // Find the text content
-          const textContent = messageOutput.content.find(item => item.type === 'text');
+          console.log('[BlindTastingScreen] Message content array:', messageOutput.content);
+          // Find the text content - GPT-5 mini uses 'output_text' type
+          const textContent = messageOutput.content.find(item => item.type === 'output_text');
+          console.log('[BlindTastingScreen] Found text content:', textContent);
+          
           if (textContent && textContent.text) {
             answer = textContent.text.trim();
           }

@@ -34,8 +34,11 @@ router.get('/test', async (req, res) => {
         // Look for the message type output that contains the text
         const messageOutput = data.output.find(item => item.type === 'message' && item.content);
         if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
-          // Find the text content
-          const textContent = messageOutput.content.find(item => item.type === 'text');
+          console.log('[chat] Message content array:', messageOutput.content);
+          // Find the text content - GPT-5 mini uses 'output_text' type
+          const textContent = messageOutput.content.find(item => item.type === 'output_text');
+          console.log('[chat] Found text content:', textContent);
+          
           if (textContent && textContent.text) {
             testResponseText = textContent.text.trim();
           }
@@ -141,8 +144,8 @@ router.post('/somm', async (req, res) => {
       
       if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
         console.log('[chat] Message content array:', messageOutput.content);
-        // Find the text content
-        const textContent = messageOutput.content.find(item => item.type === 'text');
+        // Find the text content - GPT-5 mini uses 'output_text' type
+        const textContent = messageOutput.content.find(item => item.type === 'output_text');
         console.log('[chat] Found text content:', textContent);
         
         if (textContent && textContent.text) {
