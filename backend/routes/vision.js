@@ -87,8 +87,8 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       ],
     });
 
-    // 6) Call OpenAI GPT-5 for vision analysis
-    console.log('[vision] Calling OpenAI GPT-5 for image analysis...');
+    // 6) Call OpenAI gpt-4o-mini for vision analysis
+    console.log('[vision] Calling OpenAI gpt-4o-mini for image analysis...');
     
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: 'OpenAI API key not configured' });
@@ -101,7 +101,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5',
+        model: process.env.VISION_MODEL || 'gpt-4o-mini',
         messages,
       }),
     }).then(r => r.json());
@@ -114,7 +114,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
     // Extract text from chat completions format
     const answer = ai?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not analyze the image.';
 
-    console.log('[vision] GPT-5 analysis successful');
+    console.log('[vision] gpt-4o-mini analysis successful');
     return res.json({ answer, imageUrl });
 
   } catch (err) {

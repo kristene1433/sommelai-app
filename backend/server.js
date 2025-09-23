@@ -54,6 +54,10 @@ app.use('/api/vision', visionRouter);
 const chatRouter = require('./routes/chat');
 app.use('/api/chat', chatRouter);
 
+// 7. Web search routes
+const webSearchRouter = require('./routes/webSearch');
+app.use('/api/webSearch', webSearchRouter);
+
 // 7. Cancel subscription routes
 const cancelRoutes = require('./routes/cancel');  // or correct path
 app.use('/api/subscription', cancelRoutes);

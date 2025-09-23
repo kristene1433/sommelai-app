@@ -82,38 +82,49 @@ export default function WineChat({ userPlan, userEmail }: Props) {
         ]);
         return;
       }
-      const apiRes = await fetch(`${BASE_URL}/api/searchWineLocal`, {
+      
+      // Use real web search instead of generated results
+      const apiRes = await fetch(`${BASE_URL}/api/webSearch/wineStores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ zip, query: q }),
       });
       if (!apiRes.ok) {
-        setResponse('Local search failed.');
+        setResponse('Web search failed.');
         setChatHistory(prev => [
           ...prev,
           { role: 'user', content: q, type: 'text' },
-          { role: 'assistant', content: 'Local search failed.', type: 'text' },
+          { role: 'assistant', content: 'Web search failed.', type: 'text' },
         ]);
         return;
       }
-      let { results } = (await apiRes.json()) as { results: LocalItem[] };
-      if (prefs?.wineTypes.length) {
-        const wanted = prefs.wineTypes.map(t => t.toLowerCase());
-        const filtered = results.filter(r =>
-          wanted.some(w => r.name.toLowerCase().includes(w))
-        );
-        if (filtered.length) results = filtered;
-      }
+      const { results, sources, searchQuery, location } = (await apiRes.json()) as { 
+        results: LocalItem[]; 
+        sources: Array<{title: string; url: string; startIndex: number; endIndex: number}>;
+        searchQuery: string;
+        location: string;
+      };
+      
       if (!results.length) {
-        setResponse('No local listings found.');
+        setResponse(`No wine stores found near ${location}. Try a different wine or location.`);
         setChatHistory(prev => [
           ...prev,
           { role: 'user', content: q, type: 'text' },
-          { role: 'assistant', content: 'No local listings found.', type: 'text' },
+          { role: 'assistant', content: `No wine stores found near ${location}. Try a different wine or location.`, type: 'text' },
         ]);
         return;
       }
-      setLocalRes(results.slice(0, 3));
+      
+      // Convert web search results to LocalItem format
+      const localItems: LocalItem[] = results.map(store => ({
+        name: store.name || 'Wine Store',
+        price: 'Call for price',
+        store: store.name || 'Wine Store',
+        address: store.address || '',
+        url: store.website || ''
+      }));
+      
+      setLocalRes(localItems.slice(0, 3));
       setChatHistory(prev => [
         ...prev,
         { role: 'user', content: q, type: 'text' },
