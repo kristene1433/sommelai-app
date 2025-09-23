@@ -17,7 +17,7 @@ type Props = { userPlan: 'paid'; userEmail: string };
 type Prefs = { wineTypes: string[]; flavorProfiles: string[] };
 type LocalItem = {
   name: string; price: string; store: string;
-  address?: string; url?: string;
+  address?: string; url?: string; website?: string;
 };
 
 const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
@@ -364,11 +364,11 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       const buf = await r.arrayBuffer();
       console.log('[speakResponse] Got audio buffer, size:', buf.byteLength);
       
-      const path = FileSystem.cacheDirectory + 'sommelai.mp3';
+      const path = 'file:///tmp/sommelai.mp3';
       console.log('[speakResponse] Saving to path:', path);
       
       await FileSystem.writeAsStringAsync(path, Buffer.from(buf).toString('base64'), {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: 'base64',
       });
       
       console.log('[speakResponse] File saved, creating audio sound...');
@@ -572,15 +572,17 @@ export default function WineChat({ userPlan, userEmail }: Props) {
           {Platform.OS !== 'web' && !!response && !localRes.length && (
             <View style={styles.speakAndResetRow}>
               {!isSpeaking ? (
-                <Pressable style={[styles.buttonSecondary, styles.smallButton]} onPress={() => {
-                  console.log('[WineChat] Speak button pressed, response:', response);
-                  speakResponse(response);
-                }}>
-                  <Text style={styles.smallButtonText}>🔊 Hear Sommelier Speak</Text>
-                </Pressable>
-                <Text style={[styles.smallButtonText, { fontSize: 10, opacity: 0.7, marginTop: 2 }]}>
-                  AI-generated voice
-                </Text>
+                <View>
+                  <Pressable style={[styles.buttonSecondary, styles.smallButton]} onPress={() => {
+                    console.log('[WineChat] Speak button pressed, response:', response);
+                    speakResponse(response);
+                  }}>
+                    <Text style={styles.smallButtonText}>🔊 Hear Sommelier Speak</Text>
+                  </Pressable>
+                  <Text style={[styles.smallButtonText, { fontSize: 10, opacity: 0.7, marginTop: 2 }]}>
+                    AI-generated voice
+                  </Text>
+                </View>
               ) : (
                 <Pressable style={[styles.buttonSecondary, styles.smallButton]} onPress={stopSpeaking}>
                   <Text style={styles.smallButtonText}>⏹ Stop Speaking</Text>
