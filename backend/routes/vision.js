@@ -87,8 +87,8 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       ],
     });
 
-    // 6) Call OpenAI gpt-4o-mini for vision analysis
-    console.log('[vision] Calling OpenAI gpt-4o-mini for image analysis...');
+    // 6) Call OpenAI VISION_MODEL (default gpt-5-nano for image input)
+    console.log('[vision] Calling OpenAI VISION_MODEL for image analysis...');
     
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: 'OpenAI API key not configured' });
@@ -101,7 +101,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.VISION_MODEL || 'gpt-4o-mini',
+        model: process.env.VISION_MODEL || 'gpt-5-nano',
         messages,
       }),
     }).then(r => r.json());

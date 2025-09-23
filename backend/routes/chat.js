@@ -5,7 +5,7 @@ const router = express.Router();
 // Test endpoint to verify OpenAI API connectivity
 router.get('/test', async (req, res) => {
   try {
-    console.log('[chat] Testing OpenAI gpt-oss-20b connectivity...');
+    console.log('[chat] Testing OpenAI TEXT_MODEL connectivity...');
     const testResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -13,7 +13,7 @@ router.get('/test', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.TEXT_MODEL || 'gpt-oss-20b',
+        model: process.env.TEXT_MODEL || 'gpt-5-nano',
         messages: [
           { role: 'user', content: 'Hello, how are you?' }
         ],
@@ -24,7 +24,7 @@ router.get('/test', async (req, res) => {
     console.log('[chat] Test response:', data);
     const text = data?.choices?.[0]?.message?.content?.trim();
     if (testResponse.ok && text) {
-      res.json({ success: true, message: 'OpenAI gpt-oss-20b OK', testResponse: text });
+      res.json({ success: true, message: 'OpenAI TEXT_MODEL OK', testResponse: text });
     } else {
       res.json({ success: false, message: 'OpenAI API test failed', error: data?.error || 'Unknown error' });
     }
@@ -71,7 +71,7 @@ router.post('/somm', async (req, res) => {
       ...messages
     ];
 
-    console.log('[chat] Calling OpenAI gpt-oss-20b...');
+    console.log('[chat] Calling OpenAI TEXT_MODEL...');
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
     
@@ -82,7 +82,7 @@ router.post('/somm', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.TEXT_MODEL || 'gpt-oss-20b',
+        model: process.env.TEXT_MODEL || 'gpt-5-nano',
         messages: fullMessages,
       }),
       signal: controller.signal,
