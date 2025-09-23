@@ -84,7 +84,7 @@ router.post('/wineStores', async (req, res) => {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini-search-preview',
+        model: 'gpt-5-mini-2025-08-07',
         web_search_options: {},
         messages: [
           {
@@ -93,7 +93,7 @@ router.post('/wineStores', async (req, res) => {
           },
           {
             role: 'user',
-            content: `Find 3 different specific wines for sale online: ${wineName}. Search for actual wines available for purchase with real prices and direct purchase links. Look for wines from different stores and websites. Include real prices (not "Call for price"). Return ONLY a JSON array with 3 different wines, each with unique names, prices, store names, and direct URLs to buy the wine.`
+            content: `Find 3 different specific wines for sale online: ${wineName}. Search the web for actual wines available for purchase with real prices and direct purchase links. Look for wines from different stores and websites. Include real prices (not "Call for price"). Return ONLY a JSON array with 3 different wines, each with unique names, prices, store names, and direct URLs to buy the wine.`
           }
         ],
       }),

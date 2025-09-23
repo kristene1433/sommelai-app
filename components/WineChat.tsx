@@ -345,7 +345,12 @@ export default function WineChat({ userPlan, userEmail }: Props) {
           Authorization: `Bearer ${OPENAI_API_KEY?.trim()}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ model: 'tts-1', input: cleanText, voice: 'nova' }),
+        body: JSON.stringify({ 
+          model: 'gpt-4o-mini-tts', 
+          input: cleanText, 
+          voice: 'coral',
+          instructions: 'Speak in a knowledgeable and friendly tone as a wine expert sommelier.'
+        }),
       });
       
       console.log('[speakResponse] OpenAI API response status:', r.status);
@@ -371,6 +376,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       setSound(newSound);
       
       console.log('[speakResponse] Playing audio...');
+      // Note: This is an AI-generated voice, not a human voice
       await newSound.playAsync();
       
       newSound.setOnPlaybackStatusUpdate(status => {
@@ -572,6 +578,9 @@ export default function WineChat({ userPlan, userEmail }: Props) {
                 }}>
                   <Text style={styles.smallButtonText}>🔊 Hear Sommelier Speak</Text>
                 </Pressable>
+                <Text style={[styles.smallButtonText, { fontSize: 10, opacity: 0.7, marginTop: 2 }]}>
+                  AI-generated voice
+                </Text>
               ) : (
                 <Pressable style={[styles.buttonSecondary, styles.smallButton]} onPress={stopSpeaking}>
                   <Text style={styles.smallButtonText}>⏹ Stop Speaking</Text>

@@ -13,7 +13,7 @@ router.get('/test', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.TEXT_MODEL || 'gpt-5-nano',
+        model: process.env.TEXT_MODEL || 'gpt-5-mini-2025-08-07',
         messages: [
           { role: 'user', content: 'Hello, how are you?' }
         ],
@@ -82,7 +82,7 @@ router.post('/somm', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.TEXT_MODEL || 'gpt-5-nano',
+        model: process.env.TEXT_MODEL || 'gpt-5-mini-2025-08-07',
         messages: fullMessages,
       }),
       signal: controller.signal,
