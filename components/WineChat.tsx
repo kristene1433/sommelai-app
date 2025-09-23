@@ -309,14 +309,25 @@ export default function WineChat({ userPlan, userEmail }: Props) {
   };
 
   const speakResponse = async (text: string) => {
-    if (Platform.OS === 'web') return;
+    console.log('[speakResponse] Called with text:', text);
+    console.log('[speakResponse] Platform:', Platform.OS);
+    console.log('[speakResponse] OPENAI_API_KEY exists:', !!OPENAI_API_KEY);
+    
+    if (Platform.OS === 'web') {
+      console.log('[speakResponse] Web platform, returning early');
+      return;
+    }
+    
     try {
+      console.log('[speakResponse] Starting speech generation...');
       setIsSpeaking(true);
       if (sound) {
         await sound.stopAsync();
         await sound.unloadAsync();
       }
       const cleanText = cleanAssistantResponse(text);
+      console.log('[speakResponse] Clean text:', cleanText);
+      
       const r = await fetch('https://api.openai.com/v1/audio/speech', {
         method: 'POST',
         headers: {
@@ -325,21 +336,43 @@ export default function WineChat({ userPlan, userEmail }: Props) {
         },
         body: JSON.stringify({ model: 'tts-1', input: cleanText, voice: 'nova' }),
       });
+      
+      console.log('[speakResponse] OpenAI API response status:', r.status);
+      
+      if (!r.ok) {
+        const errorText = await r.text();
+        console.error('[speakResponse] OpenAI API error:', errorText);
+        throw new Error(`OpenAI API error: ${r.status} ${errorText}`);
+      }
+      
       const buf = await r.arrayBuffer();
+      console.log('[speakResponse] Got audio buffer, size:', buf.byteLength);
+      
       const path = FileSystem.cacheDirectory + 'sommelai.mp3';
+      console.log('[speakResponse] Saving to path:', path);
+      
       await FileSystem.writeAsStringAsync(path, Buffer.from(buf).toString('base64'), {
         encoding: FileSystem.EncodingType.Base64,
       });
+      
+      console.log('[speakResponse] File saved, creating audio sound...');
       const { sound: newSound } = await Audio.Sound.createAsync({ uri: path });
       setSound(newSound);
+      
+      console.log('[speakResponse] Playing audio...');
       await newSound.playAsync();
+      
       newSound.setOnPlaybackStatusUpdate(status => {
         if (!status.isLoaded) return;
         if ((status as AVPlaybackStatusSuccess).didJustFinish) {
+          console.log('[speakResponse] Audio finished playing');
           setIsSpeaking(false);
         }
       });
+      
+      console.log('[speakResponse] Speech started successfully');
     } catch (err) {
+      console.error('[speakResponse] Error:', err);
       setIsSpeaking(false);
     }
   };
@@ -399,6 +432,17 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       </View>
     );
   };
+
+  // Debug logging for button visibility
+  useEffect(() => {
+    console.log('[WineChat] Button conditions:', {
+      platform: Platform.OS,
+      hasResponse: !!response,
+      responseLength: response?.length,
+      localResLength: localRes.length,
+      isSpeaking
+    });
+  }, [response, localRes.length, isSpeaking]);
 
   return (
     <KeyboardAvoidingView
@@ -511,7 +555,10 @@ export default function WineChat({ userPlan, userEmail }: Props) {
           {Platform.OS !== 'web' && !!response && !localRes.length && (
             <View style={styles.speakAndResetRow}>
               {!isSpeaking ? (
-                <Pressable style={[styles.buttonSecondary, styles.smallButton]} onPress={() => speakResponse(response)}>
+                <Pressable style={[styles.buttonSecondary, styles.smallButton]} onPress={() => {
+                  console.log('[WineChat] Speak button pressed, response:', response);
+                  speakResponse(response);
+                }}>
                   <Text style={styles.smallButtonText}>🔊 Hear Sommelier Speak</Text>
                 </Pressable>
               ) : (

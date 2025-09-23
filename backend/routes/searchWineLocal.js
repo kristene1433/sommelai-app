@@ -11,16 +11,16 @@ router.post('/searchWineLocal', async (req, res) => {
   }
 
   try {
-    /* ---- Call OpenAI GPT-5 mini model ---------------------- */
-    const gptResp = await fetch('https://api.openai.com/v1/responses', {
+    /* ---- Call OpenAI GPT-4o mini model ---------------------- */
+    const gptResp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()}`,
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
-        input: [
+        model: 'gpt-4o-mini',
+        messages: [
           {
             role: 'system',
             content: 'You are a wine expert helping find local wine stores. Return ONLY valid JSON matching {"results":[{name,price,store,address,url}]}. No markdown, prose, or extra keys. Choose retailers physically located within 25 miles of the ZIP code. Do NOT list generic online shops unless none are local.'
@@ -34,61 +34,29 @@ router.post('/searchWineLocal', async (req, res) => {
     });
 
     const gpt = await gptResp.json();
-    console.log('🔎 GPT-5 mini raw:', JSON.stringify(gpt, null, 2));
+    console.log('🔎 GPT-4o mini raw:', JSON.stringify(gpt, null, 2));
 
     /* ---- Build results ------------------------------------ */
     let results = [];
 
-    /* 1️⃣ Try to parse JSON directly from output array */
+    /* 1️⃣ Try to parse JSON directly from response */
     try {
       let content = '';
       
-      if (gpt.output && Array.isArray(gpt.output)) {
-        // Look for the message type output that contains the text
-        const messageOutput = gpt.output.find(item => item.type === 'message' && item.content);
-        if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
-          console.log('[searchWineLocal] Message content array:', messageOutput.content);
-          // Find the text content - GPT-5 mini uses 'output_text' type
-          const textContent = messageOutput.content.find(item => item.type === 'output_text');
-          console.log('[searchWineLocal] Found text content:', textContent);
-          
-          if (textContent && textContent.text) {
-            content = textContent.text.trim();
-          }
-        }
-      }
-      
-      // Fallback to output_text if available
-      if (!content && gpt.output_text) {
-        content = gpt.output_text.trim();
+      if (gpt.choices && gpt.choices[0] && gpt.choices[0].message && gpt.choices[0].message.content) {
+        content = gpt.choices[0].message.content.trim();
+        console.log('[searchWineLocal] Found content:', content);
       }
       
       const parsed = JSON.parse(content);
       results = parsed.results || [];
 
-      /* Note: OpenAI GPT-5 mini provides structured responses, so we can parse from text */
     } catch {
       /* 2️⃣ Fallback: parse bullet blocks from generated text */
       let text = '';
       
-      if (gpt.output && Array.isArray(gpt.output)) {
-        // Look for the message type output that contains the text
-        const messageOutput = gpt.output.find(item => item.type === 'message' && item.content);
-        if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
-          console.log('[searchWineLocal] Message content array:', messageOutput.content);
-          // Find the text content - GPT-5 mini uses 'output_text' type
-          const textContent = messageOutput.content.find(item => item.type === 'output_text');
-          console.log('[searchWineLocal] Found text content:', textContent);
-          
-          if (textContent && textContent.text) {
-            text = textContent.text.trim();
-          }
-        }
-      }
-      
-      // Fallback to output_text if available
-      if (!text && gpt.output_text) {
-        text = gpt.output_text.trim();
+      if (gpt.choices && gpt.choices[0] && gpt.choices[0].message && gpt.choices[0].message.content) {
+        text = gpt.choices[0].message.content.trim();
       }
 
       const blocks = text.split(/\n{2,}/).slice(0, 3);
