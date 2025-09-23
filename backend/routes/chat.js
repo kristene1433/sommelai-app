@@ -5,62 +5,28 @@ const router = express.Router();
 // Test endpoint to verify OpenAI API connectivity
 router.get('/test', async (req, res) => {
   try {
-    console.log('[chat] Testing OpenAI GPT-5 mini connectivity...');
-    const testResponse = await fetch('https://api.openai.com/v1/responses', {
+    console.log('[chat] Testing OpenAI GPT-5 connectivity...');
+    const testResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
-        input: [
-          {
-            role: 'user',
-            content: 'Hello, how are you?'
-          }
+        model: 'gpt-5',
+        messages: [
+          { role: 'user', content: 'Hello, how are you?' }
         ],
       }),
     });
     
     const data = await testResponse.json();
     console.log('[chat] Test response:', data);
-    
-    if (testResponse.ok && data && data.output) {
-      // Extract text from GPT-5 mini response format
-      let testResponseText = 'No response text found';
-      
-      if (data.output && Array.isArray(data.output)) {
-        // Look for the message type output that contains the text
-        const messageOutput = data.output.find(item => item.type === 'message' && item.content);
-        if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
-          console.log('[chat] Message content array:', messageOutput.content);
-          // Find the text content - GPT-5 mini uses 'output_text' type
-          const textContent = messageOutput.content.find(item => item.type === 'output_text');
-          console.log('[chat] Found text content:', textContent);
-          
-          if (textContent && textContent.text) {
-            testResponseText = textContent.text.trim();
-          }
-        }
-      }
-      
-      // Fallback to output_text if available
-      if (testResponseText === 'No response text found' && data.output_text) {
-        testResponseText = data.output_text.trim();
-      }
-      
-      res.json({ 
-        success: true, 
-        message: 'OpenAI GPT-5 mini is working!',
-        testResponse: testResponseText 
-      });
+    const text = data?.choices?.[0]?.message?.content?.trim();
+    if (testResponse.ok && text) {
+      res.json({ success: true, message: 'OpenAI GPT-5 OK', testResponse: text });
     } else {
-      res.json({ 
-        success: false, 
-        message: 'OpenAI API test failed',
-        error: data.error || 'Unknown error'
-      });
+      res.json({ success: false, message: 'OpenAI API test failed', error: data?.error || 'Unknown error' });
     }
   } catch (err) {
     console.error('[chat] Test error:', err);
@@ -105,16 +71,16 @@ router.post('/somm', async (req, res) => {
       ...messages
     ];
 
-    console.log('[chat] Calling OpenAI GPT-5 mini...');
-    const ai = await fetch('https://api.openai.com/v1/responses', {
+    console.log('[chat] Calling OpenAI GPT-5...');
+    const ai = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
-        input: fullMessages,
+        model: 'gpt-5',
+        messages: fullMessages,
       }),
     }).then(r => r.json());
 
@@ -123,43 +89,8 @@ router.post('/somm', async (req, res) => {
       throw new Error(ai?.error?.message || 'No response from OpenAI');
     }
 
-    // Debug: Log the full response structure
-    console.log('[chat] Full GPT-5 mini response:', JSON.stringify(ai, null, 2));
-    console.log('[chat] Response keys:', Object.keys(ai));
-    console.log('[chat] Output array:', ai.output);
-    if (ai.output && Array.isArray(ai.output)) {
-      console.log('[chat] Output array length:', ai.output.length);
-      ai.output.forEach((item, index) => {
-        console.log(`[chat] Output item ${index}:`, JSON.stringify(item, null, 2));
-      });
-    }
-
-    // Extract text from GPT-5 mini response format
-    let answer = 'Sorry, I could not generate a response.';
-    
-    if (ai.output && Array.isArray(ai.output)) {
-      // Look for the message type output that contains the text
-      const messageOutput = ai.output.find(item => item.type === 'message' && item.content);
-      console.log('[chat] Found message output:', messageOutput);
-      
-      if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
-        console.log('[chat] Message content array:', messageOutput.content);
-        // Find the text content - GPT-5 mini uses 'output_text' type
-        const textContent = messageOutput.content.find(item => item.type === 'output_text');
-        console.log('[chat] Found text content:', textContent);
-        
-        if (textContent && textContent.text) {
-          answer = textContent.text.trim();
-          console.log('[chat] Extracted answer:', answer);
-        }
-      }
-    }
-    
-    // Fallback to output_text if available
-    if (answer === 'Sorry, I could not generate a response.' && ai.output_text) {
-      answer = ai.output_text.trim();
-      console.log('[chat] Using output_text fallback:', answer);
-    }
+    // Extract text from chat completions format
+    const answer = ai?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not generate a response.';
 
     console.log('[chat] Final answer:', answer);
     res.json({ answer });

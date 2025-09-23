@@ -70,7 +70,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
         ? req.body.previousWineDescription.trim()
         : null;
 
-    // 5) Build messages for OpenAI GPT-5 mini vision API
+    // 5) Build messages for OpenAI chat completions with image
     const messages = [];
 
     // Add system prompt
@@ -87,22 +87,22 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       ],
     });
 
-    // 6) Call OpenAI GPT-5 mini for vision analysis
-    console.log('[vision] Calling OpenAI GPT-5 mini for image analysis...');
+    // 6) Call OpenAI GPT-5 for vision analysis
+    console.log('[vision] Calling OpenAI GPT-5 for image analysis...');
     
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
 
-    const ai = await fetch('https://api.openai.com/v1/responses', {
+    const ai = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
-        input: messages,
+        model: 'gpt-5',
+        messages,
       }),
     }).then(r => r.json());
 
@@ -111,31 +111,10 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       throw new Error(ai?.error?.message || 'No response from OpenAI');
     }
 
-    // Extract text from GPT-5 mini response format
-    let answer = 'Sorry, I could not analyze the image.';
-    
-    if (ai.output && Array.isArray(ai.output)) {
-      // Look for the message type output that contains the text
-      const messageOutput = ai.output.find(item => item.type === 'message' && item.content);
-      if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
-        console.log('[vision] Message content array:', messageOutput.content);
-        // Find the text content - GPT-5 mini uses 'output_text' type
-        const textContent = messageOutput.content.find(item => item.type === 'output_text');
-        console.log('[vision] Found text content:', textContent);
-        
-        if (textContent && textContent.text) {
-          answer = textContent.text.trim();
-          console.log('[vision] Extracted answer:', answer);
-        }
-      }
-    }
-    
-    // Fallback to output_text if available
-    if (answer === 'Sorry, I could not analyze the image.' && ai.output_text) {
-      answer = ai.output_text.trim();
-    }
+    // Extract text from chat completions format
+    const answer = ai?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not analyze the image.';
 
-    console.log('[vision] GPT-5 mini analysis successful');
+    console.log('[vision] GPT-5 analysis successful');
     return res.json({ answer, imageUrl });
 
   } catch (err) {
