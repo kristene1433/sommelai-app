@@ -24,7 +24,23 @@ const getLocationFromZip = (zip) => {
     '70112': { city: 'New Orleans', region: 'LA', country: 'US' },
   };
   
-  return zipToLocation[zip] || { city: 'Unknown', region: 'Unknown', country: 'US' };
+  // If ZIP not found, try to extract state from ZIP pattern
+  if (!zipToLocation[zip]) {
+    const zipNum = parseInt(zip);
+    if (zipNum >= 10000 && zipNum <= 14999) {
+      return { city: 'New York', region: 'NY', country: 'US' };
+    } else if (zipNum >= 90000 && zipNum <= 96999) {
+      return { city: 'California', region: 'CA', country: 'US' };
+    } else if (zipNum >= 60000 && zipNum <= 62999) {
+      return { city: 'Chicago', region: 'IL', country: 'US' };
+    } else if (zipNum >= 30000 && zipNum <= 39999) {
+      return { city: 'Atlanta', region: 'GA', country: 'US' };
+    } else if (zipNum >= 70000 && zipNum <= 71999) {
+      return { city: 'New Orleans', region: 'LA', country: 'US' };
+    }
+  }
+  
+  return zipToLocation[zip] || { city: 'United States', region: 'US', country: 'US' };
 };
 
 // Helper to extract wine name from user query
@@ -69,24 +85,15 @@ router.post('/wineStores', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini-search-preview',
-        web_search_options: {
-          user_location: {
-            type: 'approximate',
-            approximate: {
-              country: location.country,
-              city: location.city,
-              region: location.region,
-            },
-          },
-        },
+        web_search_options: {},
         messages: [
           {
             role: 'system',
-            content: 'You are a wine expert helping find specific wines for sale online. Search the web for actual wines available for purchase and return a JSON array of results. Format: [{"name":"Wine Name","price":"$XX.XX","store":"Store Name","address":"Store Address","url":"https://store.com/wine-link","description":"Brief wine description"}]'
+            content: 'You are a wine expert helping find specific wines for sale online. Search the web for actual wines available for purchase and return ONLY a valid JSON array. Do not include any other text, explanations, or markdown. Return exactly this format: [{"name":"Wine Name","price":"$XX.XX","store":"Store Name","address":"Store Address","url":"https://store.com/wine-link","description":"Brief wine description"}]'
           },
           {
             role: 'user',
-            content: `Find specific wines for sale online: ${wineName}. Search for actual wines available for purchase with prices and direct purchase links. Include wine names, prices, store names, and direct URLs to buy the wine.`
+            content: `Find specific wines for sale online: ${wineName}. Search for actual wines available for purchase with prices and direct purchase links. Return ONLY a JSON array with wine names, prices, store names, and direct URLs to buy the wine.`
           }
         ],
       }),
@@ -103,19 +110,57 @@ router.post('/wineStores', async (req, res) => {
     const content = response.choices?.[0]?.message?.content || '';
     const annotations = response.choices?.[0]?.message?.annotations || [];
     
+    console.log('🔍 Web search response length:', content.length);
+    console.log('🔍 Annotations count:', annotations.length);
+    
     // Try to parse JSON from the response
     let results = [];
     try {
-      // Look for JSON array in the response
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      // Look for JSON array in the response (more flexible matching)
+      const jsonMatch = content.match(/\[[\s\S]*?\]/);
       if (jsonMatch) {
         results = JSON.parse(jsonMatch[0]);
+        console.log('🔍 Parsed JSON array results:', results.length);
+      } else {
+        // Try to find individual JSON objects
+        const objectMatches = content.match(/\{[^{}]*"name"[^{}]*\}/g);
+        if (objectMatches) {
+          results = objectMatches.map(match => {
+            try {
+              return JSON.parse(match);
+            } catch (e) {
+              return null;
+            }
+          }).filter(Boolean);
+          console.log('🔍 Parsed object results:', results.length);
+        } else {
+          // Try to extract wine information from text format
+          const lines = content.split('\n').filter(line => line.trim());
+          results = lines.slice(0, 3).map((line, index) => {
+            // Extract wine name, price, and store from text
+            const priceMatch = line.match(/\$[\d.]+/);
+            const price = priceMatch ? priceMatch[0] : 'Call for price';
+            return {
+              name: line.replace(/\$[\d.]+.*$/, '').trim() || `Wine ${index + 1}`,
+              price: price,
+              store: 'Wine Store',
+              address: 'See sources below',
+              url: 'N/A',
+              description: line.substring(0, 100) + '...'
+            };
+          });
+          console.log('🔍 Extracted text results:', results.length);
+        }
       }
     } catch (parseError) {
       console.log('Could not parse JSON, using fallback');
-      // Fallback: create a simple result from the text
+      console.log('Raw content:', content.substring(0, 500));
+    }
+    
+    // If no results found, create fallback
+    if (results.length === 0) {
       results = [{
-        name: 'Wine Search Results',
+        name: wineName || 'Wine Search Results',
         price: 'Call for price',
         store: 'See sources below',
         address: 'N/A',
