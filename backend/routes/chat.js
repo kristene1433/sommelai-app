@@ -72,6 +72,9 @@ router.post('/somm', async (req, res) => {
     ];
 
     console.log('[chat] Calling OpenAI GPT-5...');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
+    
     const ai = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -82,7 +85,10 @@ router.post('/somm', async (req, res) => {
         model: 'gpt-5',
         messages: fullMessages,
       }),
+      signal: controller.signal,
     }).then(r => r.json());
+    
+    clearTimeout(timeoutId);
 
     if (!ai || ai.error) {
       console.error('[chat] OpenAI API Error:', ai);
@@ -96,7 +102,11 @@ router.post('/somm', async (req, res) => {
     res.json({ answer });
   } catch (err) {
     console.error('[chat] error:', err);
-    res.status(500).json({ error: err.stack || err.message || 'Chat error' });
+    if (err.name === 'AbortError') {
+      res.status(408).json({ error: 'Request timeout - OpenAI took too long to respond' });
+    } else {
+      res.status(500).json({ error: err.stack || err.message || 'Chat error' });
+    }
   }
 });
 
