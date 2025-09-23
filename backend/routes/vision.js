@@ -78,12 +78,12 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       role: 'user',
       content: [
         { 
-          type: 'input_text', 
+          type: 'text', 
           text: 'You are a master sommelier and visual expert. Analyze the image of the wine or menu provided and answer the user question. If previous wine context is provided, use it to inform your answers and keep conversation consistent. Do NOT guess if unsure; ask for clarification politely. Be knowledgeable, approachable, and charming in your responses.' + 
           (previousWineDescription ? `\n\nPrevious wine context: ${previousWineDescription}` : '') +
           `\n\nQuestion: ${userQuestion}`
         },
-        { type: 'input_image', image_url: imageUrl },
+        { type: 'image_url', image_url: { url: imageUrl } },
       ],
     });
 
@@ -114,7 +114,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
     // Extract text from chat completions format
     const answer = ai?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not analyze the image.';
 
-    console.log('[vision] gpt-4o-mini analysis successful');
+    console.log('[vision] gpt-5-nano analysis successful');
     return res.json({ answer, imageUrl });
 
   } catch (err) {
