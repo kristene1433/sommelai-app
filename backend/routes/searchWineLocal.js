@@ -11,7 +11,7 @@ router.post('/searchWineLocal', async (req, res) => {
   }
 
   try {
-    /* ---- Call OpenAI with TEXT_MODEL (default gpt-5-nano) ---------------------- */
+    /* ---- Call OpenAI with TEXT_MODEL (default gpt-4o-mini) ---------------------- */
     const gptResp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -19,7 +19,7 @@ router.post('/searchWineLocal', async (req, res) => {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()}`,
       },
       body: JSON.stringify({
-        model: process.env.TEXT_MODEL || 'gpt-5-nano',
+        model: process.env.TEXT_MODEL || 'gpt-4o-mini',
         messages: [
           {
             role: 'system',

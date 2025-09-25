@@ -87,7 +87,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       ],
     });
 
-    // 6) Call OpenAI VISION_MODEL (default gpt-5-mini for image input)
+    // 6) Call OpenAI VISION_MODEL (default gpt-4o for image input)
     console.log('[vision] Calling OpenAI VISION_MODEL for image analysis...');
     
     if (!process.env.OPENAI_API_KEY) {
@@ -101,7 +101,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.VISION_MODEL || 'gpt-5-mini',
+        model: process.env.VISION_MODEL || 'gpt-4o',
         messages,
       }),
     }).then(r => r.json());
@@ -114,7 +114,7 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
     // Extract text from chat completions format
     const answer = ai?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not analyze the image.';
 
-    console.log('[vision] gpt-5-mini analysis successful');
+    console.log('[vision] gpt-4o analysis successful');
     return res.json({ answer, imageUrl });
 
   } catch (err) {
