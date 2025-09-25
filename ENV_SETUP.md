@@ -5,7 +5,7 @@
 Create a `.env` file in your project root with the following variables:
 
 ```bash
-# OpenAI API Key (for GPT-5 mini chat and vision)
+# OpenAI API Key (for GPT-5 nano chat and GPT-5 mini vision)
 OPENAI_API_KEY=your_openai_api_key_here
 
 # MongoDB Connection String
@@ -25,8 +25,8 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
 ## How to Get These Keys
 
 1. **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
-   - Required for: Chat functionality (GPT-5 mini), Image analysis (GPT-5 mini vision)
-   - Cost: $0.25 per 1M input tokens, $2.00 per 1M output tokens
+   - Required for: Chat functionality (GPT-5 nano), Image analysis (GPT-5 mini vision)
+   - Cost: Varies by model - check OpenAI pricing for current rates
 
 2. **MongoDB URI**: Get from [MongoDB Atlas](https://cloud.mongodb.com/)
    - Required for: User data, preferences, wine journal entries
@@ -39,9 +39,21 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
 
 ## Model Information
 
-- **GPT-5 mini**: Used for all chat and vision functionality
-  - Fast, cost-effective, always available
-  - 400K context window, 128K max output tokens
-  - May 31, 2024 knowledge cutoff
+- **GPT-5 nano**: Used for chat functionality
+  - Ultra-fast, lightweight model for real-time conversations
+  - Optimized for speed and efficiency
+  - Perfect for chat applications where responsiveness is key
+  - Supports text and structured outputs
+
+- **GPT-5 mini**: Used for vision functionality
+  - Compact version of GPT-5 with vision capabilities
+  - Handles image analysis and visual reasoning tasks
+  - Reduced latency and cost compared to full GPT-5
   - Supports images, text, and structured outputs
+
+- **GPT-5 nano**: Also used for web search functionality
+  - Fast web search capabilities
+  - Can search the internet for current information
+  - Returns structured data with citations
+  - Perfect for finding wine stores and current wine prices
 

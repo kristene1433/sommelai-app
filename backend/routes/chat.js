@@ -13,7 +13,7 @@ router.get('/test', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.TEXT_MODEL || 'gpt-5-mini-2025-08-07',
+        model: process.env.TEXT_MODEL || 'gpt-5-nano',
         messages: [
           { role: 'user', content: 'Hello, how are you?' }
         ],
@@ -73,7 +73,7 @@ router.post('/somm', async (req, res) => {
 
     console.log('[chat] Calling OpenAI TEXT_MODEL...');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
     
     const ai = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -82,7 +82,7 @@ router.post('/somm', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.TEXT_MODEL || 'gpt-5-mini-2025-08-07',
+        model: process.env.TEXT_MODEL || 'gpt-5-nano',
         messages: fullMessages,
       }),
       signal: controller.signal,

@@ -1,7 +1,13 @@
 // routes/webSearch.js - Real web search for wine stores
 const express = require('express');
 const router = express.Router();
+const OpenAI = require('openai');
 require('dotenv').config();
+
+// Initialize OpenAI client
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY?.trim(),
+});
 
 // Helper to map ZIP to city/region for location-aware search
 const getLocationFromZip = (zip) => {
@@ -77,32 +83,25 @@ router.post('/wineStores', async (req, res) => {
     console.log('🔍 Extracted wine:', wineName);
     console.log('🔍 Location:', location);
     
-    const ai = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-5-mini-2025-08-07',
-        web_search_options: {},
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a wine expert helping find specific wines for sale online. Search the web for actual wines available for purchase and return ONLY a valid JSON array. Do not include any other text, explanations, or markdown. Return exactly this format: [{"name":"Wine Name","price":"$XX.XX","store":"Store Name","address":"Store Address","url":"https://store.com/wine-link","description":"Brief wine description"}]'
-          },
-          {
-            role: 'user',
-            content: `Find 3 different specific wines for sale online: ${wineName}. Search the web for actual wines available for purchase with real prices and direct purchase links. Look for wines from different stores and websites. Include real prices (not "Call for price"). Return ONLY a JSON array with 3 different wines, each with unique names, prices, store names, and direct URLs to buy the wine.`
-          }
-        ],
-      }),
+    const completion = await client.chat.completions.create({
+      model: "gpt-5-nano",
+      web_search_options: {},
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a wine expert helping find specific wines for sale online. Search the web for actual wines available for purchase and return ONLY a valid JSON array. Do not include any other text, explanations, or markdown. Return exactly this format: [{"name":"Wine Name","price":"$XX.XX","store":"Store Name","address":"Store Address","url":"https://store.com/wine-link","description":"Brief wine description"}]'
+        },
+        {
+          role: 'user',
+          content: `Find 3 different specific wines for sale online: ${wineName}. Search the web for actual wines available for purchase with real prices and direct purchase links. Look for wines from different stores and websites. Include real prices (not "Call for price"). Return ONLY a JSON array with 3 different wines, each with unique names, prices, store names, and direct URLs to buy the wine.`
+        }
+      ],
     });
 
-    const response = await ai.json();
+    const response = completion;
     
-    if (!ai.ok) {
-      console.error('Web search API error:', response);
+    if (!response || response.error) {
+      console.error('Web search API error:', response?.error);
       return res.status(500).json({ message: 'Web search failed' });
     }
 
