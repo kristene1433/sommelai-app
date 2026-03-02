@@ -16,16 +16,17 @@ export default function ChoosePlanScreen({ navigation, route, fetchPlan }: Props
   const startStripeCheckout = async () => {
     setLoading(true);
     try {
-      const res = await fetch(apiUrl('/api/create-checkout-session'), {
+      // DEV ONLY: bypass Stripe and mark user as paid via preferences
+      await fetch(apiUrl('/api/preferences'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email }),
       });
-      const data = await res.json();
-      if (!data.url) throw new Error('Could not get Stripe URL');
-      Linking.openURL(data.url);
+      await fetchPlan(email);
+      Alert.alert('Success', 'Dev mode: subscription activated without Stripe.');
+      navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', 'Could not start checkout. Check your connection.');
+      Alert.alert('Error', 'Dev mode: could not fake subscription.');
     }
     setLoading(false);
   };

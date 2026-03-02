@@ -10,9 +10,10 @@ router.post('/api/login', async (req, res) => {
   if (!user) {
     return res.status(400).json({ error: 'User not found. Please sign up and pay.' });
   }
-  if (!user.stripeSubscriptionActive) {
-    return res.status(400).json({ error: 'No active subscription. Please sign up and pay.' });
-  }
+  // DEV ONLY: bypass subscription check so we can use the app without Stripe
+  // if (!user.stripeSubscriptionActive) {
+  //   return res.status(400).json({ error: 'No active subscription. Please sign up and pay.' });
+  // }
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) {
     return res.status(401).json({ error: 'Incorrect password' });
