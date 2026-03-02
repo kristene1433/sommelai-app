@@ -430,9 +430,15 @@ export default function WineChat({ userPlan, userEmail }: Props) {
   };
 
   const Listing = ({ item }: { item: LocalItem }) => {
-    const fallback = `https://www.wine-searcher.com/find/${encodeURIComponent(item.name)}`;
-    const rawUrl = item.url || fallback;
-    const displayUrl = safeUrl(rawUrl);
+    // Prefer store website/URL from backend; if missing, fall back to a
+    // Google Maps search for the store/address so the link always matches
+    // the physical location being shown.
+    const hasBackendUrl = !!item.url;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      item.address || item.store || item.name
+    )}`;
+    const rawUrl = hasBackendUrl ? item.url! : mapsUrl;
+    const displayUrl = hasBackendUrl ? safeUrl(item.url!) : 'Open in Maps';
     return (
       <View style={styles.listingCard}>
         <Text style={styles.listTitle}>{item.name}</Text>

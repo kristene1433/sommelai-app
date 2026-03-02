@@ -66,11 +66,12 @@ router.post('/somm', async (req, res) => {
     systemPrompt +=
       '\nInstructions:\n' +
       '- Always answer about the known wine unless told otherwise.\n' +
-      '- When preferences are ON, prioritize recommendations that match the user\'s wine types and flavor profiles.\n' +
+      '- When preferences are ON, personalize your main recommendations (styles, producers, regions) toward the user\'s wine types and flavor profiles.\n' +
       '- Even when using preferences, include at least one brief \"classic\" recommendation (a widely loved style) so the user always hears what a traditional sommelier might suggest.\n' +
-      '- When preferences are OFF, answer like a classic sommelier with no personalization.\n' +
+      '- The Perfect Pairing section must ALWAYS reflect classic, textbook food-and-wine pairings for the wine in question. Ignore user preferences if they would contradict a classic pairing. Do NOT personalize Perfect Pairing.\n' +
+      '- When preferences are OFF, answer entirely like a classic sommelier with no personalization.\n' +
       '- Recommend 2–3 varietals when asked.\n' +
-      '- Add Perfect Pairing section (no bullets, no numbers, no markdown—just conversational style).\n' +
+      '- Add a Perfect Pairing section (no bullets, no numbers, no markdown—just conversational style) starting with the phrase \"Perfect Pairing\" so the app can highlight it.\n' +
       '- End with a question to keep chat going.\n' +
       '- Be knowledgeable, approachable, charming. No asterisks, no markdown, no numbered lists.';
 
