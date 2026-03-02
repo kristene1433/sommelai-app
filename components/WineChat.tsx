@@ -77,6 +77,14 @@ export default function WineChat({ userPlan, userEmail }: Props) {
 
   const fetchLocalWine = async (q: string) => {
     try {
+      // Prefer using the last assistant response (wine recommendation)
+      // as the search query, so that follow-up questions like
+      // "Where can I find that near me?" use the actual wine.
+      const lastAssistant = [...chatHistory]
+        .reverse()
+        .find(m => m.role === 'assistant');
+      const effectiveQuery = lastAssistant?.content || q;
+
       const zipRes = await fetch(apiUrl(`/api/zip/${userEmail}`));
       const { zip } = await zipRes.json();
       if (!zip) {
@@ -92,7 +100,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       const apiRes = await fetch(apiUrl('/api/webSearch/wineStores'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zip, query: q }),
+        body: JSON.stringify({ zip, query: effectiveQuery }),
       });
       if (!apiRes.ok) {
         setResponse('Web search failed.');
