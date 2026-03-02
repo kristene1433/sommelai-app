@@ -17,6 +17,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, EntryType } from '../types';
+import { apiUrl } from '../config/api';
 
 type BoolSetter = React.Dispatch<React.SetStateAction<boolean>>;
 type StrSetter = React.Dispatch<React.SetStateAction<string>>;
@@ -53,6 +54,118 @@ const getTodayDate = () => {
   });
 };
 
+type WineInfoSectionProps = {
+  collapsed: boolean;
+  onToggle: () => void;
+  producer: string;
+  setProducer: (v: string) => void;
+  wineName: string;
+  setWineName: (v: string) => void;
+  varietals: string;
+  setVarietals: (v: string) => void;
+  subregion: string;
+  setSubregion: (v: string) => void;
+  region: string;
+  setRegion: (v: string) => void;
+  country: string;
+  setCountry: (v: string) => void;
+  vintage: string;
+  setVintage: (v: string) => void;
+  dateTasted: string;
+  setDateTasted: (v: string) => void;
+};
+
+function WineInfoSection({
+  collapsed,
+  onToggle,
+  producer,
+  setProducer,
+  wineName,
+  setWineName,
+  varietals,
+  setVarietals,
+  subregion,
+  setSubregion,
+  region,
+  setRegion,
+  country,
+  setCountry,
+  vintage,
+  setVintage,
+  dateTasted,
+  setDateTasted,
+}: WineInfoSectionProps) {
+  return (
+    <>
+      <TouchableOpacity onPress={onToggle}>
+        <Text style={styles.sectionTitle}>
+          🍷 Wine Information {collapsed ? '▼' : '▲'}
+        </Text>
+      </TouchableOpacity>
+      {!collapsed && (
+        <View>
+          <TextInput
+            style={styles.input}
+            placeholder="Producer"
+            value={producer}
+            onChangeText={setProducer}
+            placeholderTextColor="#B8B8B8"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Wine Name / Classification"
+            value={wineName}
+            onChangeText={setWineName}
+            placeholderTextColor="#B8B8B8"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Varietal(s)"
+            value={varietals}
+            onChangeText={setVarietals}
+            placeholderTextColor="#B8B8B8"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Subregion"
+            value={subregion}
+            onChangeText={setSubregion}
+            placeholderTextColor="#B8B8B8"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Region"
+            value={region}
+            onChangeText={setRegion}
+            placeholderTextColor="#B8B8B8"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Country"
+            value={country}
+            onChangeText={setCountry}
+            placeholderTextColor="#B8B8B8"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Vintage"
+            value={vintage}
+            onChangeText={setVintage}
+            placeholderTextColor="#B8B8B8"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Date Tasted (YYYY-MM-DD)"
+            value={dateTasted}
+            onChangeText={setDateTasted}
+            placeholderTextColor="#B8B8B8"
+          />
+        </View>
+      )}
+    </>
+  );
+}
+
 export default function WineJournalScreen() {
   const navigation = useNavigation<
     NativeStackNavigationProp<RootStackParamList, 'WineJournal'>
@@ -63,7 +176,7 @@ export default function WineJournalScreen() {
   const isEdit = Boolean(entry?._id);
 
   // *** UPDATED BASE URL to include /api/journal ***
-  const BASE = 'https://sommelai-app-a743d57328f0.herokuapp.com/api/journal';
+  const BASE = apiUrl('/api/journal');
   const URL = isEdit ? `${BASE}/${entry!._id}` : `${BASE}/add`;
   const METHOD = isEdit ? 'PUT' : 'POST';
 
@@ -224,6 +337,134 @@ export default function WineJournalScreen() {
     </View>
   );
 
+  type VisualSectionProps = {
+    collapsed: boolean;
+    onToggle: () => void;
+    clarity: string;
+    setClarity: StrSetter;
+    clarityOpen: boolean;
+    setClarityOpen: BoolSetter;
+    brightness: string;
+    setBrightness: StrSetter;
+    brightnessOpen: boolean;
+    setBrightnessOpen: BoolSetter;
+    colorIntensity: string;
+    setColorIntensity: StrSetter;
+    colorIntensityOpen: boolean;
+    setColorIntensityOpen: BoolSetter;
+    hueRed: string;
+    setHueRed: StrSetter;
+    hueRedOpen: boolean;
+    setHueRedOpen: BoolSetter;
+    hueWhite: string;
+    setHueWhite: StrSetter;
+    hueWhiteOpen: boolean;
+    setHueWhiteOpen: BoolSetter;
+    hueRose: string;
+    setHueRose: StrSetter;
+    hueRoseOpen: boolean;
+    setHueRoseOpen: BoolSetter;
+    viscosity: string;
+    setViscosity: StrSetter;
+    viscosityOpen: boolean;
+    setViscosityOpen: BoolSetter;
+  };
+
+  const VisualSection = (props: VisualSectionProps) => {
+    const {
+      collapsed,
+      onToggle,
+      clarity,
+      setClarity,
+      clarityOpen,
+      setClarityOpen,
+      brightness,
+      setBrightness,
+      brightnessOpen,
+      setBrightnessOpen,
+      colorIntensity,
+      setColorIntensity,
+      colorIntensityOpen,
+      setColorIntensityOpen,
+      hueRed,
+      setHueRed,
+      hueRedOpen,
+      setHueRedOpen,
+      hueWhite,
+      setHueWhite,
+      hueWhiteOpen,
+      setHueWhiteOpen,
+      hueRose,
+      setHueRose,
+      hueRoseOpen,
+      setHueRoseOpen,
+      viscosity,
+      setViscosity,
+      viscosityOpen,
+      setViscosityOpen,
+    } = props;
+
+    return (
+      <>
+        <TouchableOpacity onPress={onToggle}>
+          <Text style={styles.sectionTitle}>
+            🟥 Visual {collapsed ? '▼' : '▲'}
+          </Text>
+        </TouchableOpacity>
+        {!collapsed && (
+          <View>
+            {dropdown('Clarity', clarityOpen, setClarityOpen, clarity, setClarity, [
+              'Clear',
+              'Slight Haze',
+              'Murky',
+            ])}
+            {dropdown(
+              'Brightness',
+              brightnessOpen,
+              setBrightnessOpen,
+              brightness,
+              setBrightness,
+              ['Dull', 'Bright', 'Day Bright', 'Star Bright', 'Brilliant']
+            )}
+            {dropdown(
+              'Color Intensity',
+              colorIntensityOpen,
+              setColorIntensityOpen,
+              colorIntensity,
+              setColorIntensity,
+              ['Pale', 'Medium', 'Deep']
+            )}
+            {dropdown('Hue (Red)', hueRedOpen, setHueRedOpen, hueRed, setHueRed, [
+              'Purple',
+              'Garnet',
+              'Ruby',
+              'Tawny',
+              'Brown',
+            ])}
+            {dropdown(
+              'Hue (White)',
+              hueWhiteOpen,
+              setHueWhiteOpen,
+              hueWhite,
+              setHueWhite,
+              ['Straw', 'Yellow', 'Gold', 'Amber', 'Brown']
+            )}
+            {dropdown('Hue (Rose)', hueRoseOpen, setHueRoseOpen, hueRose, setHueRose, [
+              'Pink',
+              'Salmon',
+              'Copper',
+            ])}
+            {dropdown('Viscosity', viscosityOpen, setViscosityOpen, viscosity, setViscosity, [
+              'Low',
+              'Medium',
+              'High',
+            ])}
+          </View>
+        )}
+      </>
+    );
+  };
+
   // Image picker
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -327,104 +568,60 @@ export default function WineJournalScreen() {
           </View>
 
           {/* Collapsible Wine Information */}
-          <TouchableOpacity onPress={() => setWineInfoCollapsed((c) => !c)}>
-            <Text style={styles.sectionTitle}>🍷 Wine Information {wineInfoCollapsed ? '▼' : '▲'}</Text>
-          </TouchableOpacity>
-          {!wineInfoCollapsed && (
-            <View>
-              <TextInput
-                style={styles.input}
-                placeholder="Producer"
-                value={producer}
-                onChangeText={setProducer}
-                placeholderTextColor="#B8B8B8"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Wine Name / Classification"
-                value={wineName}
-                onChangeText={setWineName}
-                placeholderTextColor="#B8B8B8"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Varietal(s)"
-                value={varietals}
-                onChangeText={setVarietals}
-                placeholderTextColor="#B8B8B8"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Subregion"
-                value={subregion}
-                onChangeText={setSubregion}
-                placeholderTextColor="#B8B8B8"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Region"
-                value={region}
-                onChangeText={setRegion}
-                placeholderTextColor="#B8B8B8"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Country"
-                value={country}
-                onChangeText={setCountry}
-                placeholderTextColor="#B8B8B8"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Vintage"
-                value={vintage}
-                onChangeText={setVintage}
-                placeholderTextColor="#B8B8B8"
-              />
-              {/* New Date Tasted input */}
-              <TextInput
-                style={styles.input}
-                placeholder="Date Tasted (YYYY-MM-DD)"
-                value={dateTasted}
-                onChangeText={setDateTasted}
-                placeholderTextColor="#B8B8B8"
-              />
-            </View>
-          )}
+          <WineInfoSection
+            collapsed={wineInfoCollapsed}
+            onToggle={() => setWineInfoCollapsed((c) => !c)}
+            producer={producer}
+            setProducer={setProducer}
+            wineName={wineName}
+            setWineName={setWineName}
+            varietals={varietals}
+            setVarietals={setVarietals}
+            subregion={subregion}
+            setSubregion={setSubregion}
+            region={region}
+            setRegion={setRegion}
+            country={country}
+            setCountry={setCountry}
+            vintage={vintage}
+            setVintage={setVintage}
+            dateTasted={dateTasted}
+            setDateTasted={setDateTasted}
+          />
 
           {/* Visual Section */}
-          <TouchableOpacity onPress={() => setVisualCollapsed((c) => !c)}>
-            <Text style={styles.sectionTitle}>🟥 Visual {visualCollapsed ? '▼' : '▲'}</Text>
-          </TouchableOpacity>
-          {!visualCollapsed && (
-            <View>
-              {dropdown('Clarity', clarityOpen, setClarityOpen, clarity, setClarity, ['Clear', 'Slight Haze', 'Murky'])}
-              {dropdown(
-                'Brightness',
-                brightnessOpen,
-                setBrightnessOpen,
-                brightness,
-                setBrightness,
-                ['Dull', 'Bright', 'Day Bright', 'Star Bright', 'Brilliant']
-              )}
-              {dropdown('Color Intensity', colorIntensityOpen, setColorIntensityOpen, colorIntensity, setColorIntensity, [
-                'Pale',
-                'Medium',
-                'Deep',
-              ])}
-              {dropdown('Hue (Red)', hueRedOpen, setHueRedOpen, hueRed, setHueRed, ['Purple', 'Garnet', 'Ruby', 'Tawny', 'Brown'])}
-              {dropdown(
-                'Hue (White)',
-                hueWhiteOpen,
-                setHueWhiteOpen,
-                hueWhite,
-                setHueWhite,
-                ['Straw', 'Yellow', 'Gold', 'Amber', 'Brown']
-              )}
-              {dropdown('Hue (Rose)', hueRoseOpen, setHueRoseOpen, hueRose, setHueRose, ['Pink', 'Salmon', 'Copper'])}
-              {dropdown('Viscosity', viscosityOpen, setViscosityOpen, viscosity, setViscosity, ['Low', 'Medium', 'High'])}
-            </View>
-          )}
+          <VisualSection
+            collapsed={visualCollapsed}
+            onToggle={() => setVisualCollapsed((c) => !c)}
+            clarity={clarity}
+            setClarity={setClarity}
+            clarityOpen={clarityOpen}
+            setClarityOpen={setClarityOpen}
+            brightness={brightness}
+            setBrightness={setBrightness}
+            brightnessOpen={brightnessOpen}
+            setBrightnessOpen={setBrightnessOpen}
+            colorIntensity={colorIntensity}
+            setColorIntensity={setColorIntensity}
+            colorIntensityOpen={colorIntensityOpen}
+            setColorIntensityOpen={setColorIntensityOpen}
+            hueRed={hueRed}
+            setHueRed={setHueRed}
+            hueRedOpen={hueRedOpen}
+            setHueRedOpen={setHueRedOpen}
+            hueWhite={hueWhite}
+            setHueWhite={setHueWhite}
+            hueWhiteOpen={hueWhiteOpen}
+            setHueWhiteOpen={setHueWhiteOpen}
+            hueRose={hueRose}
+            setHueRose={setHueRose}
+            hueRoseOpen={hueRoseOpen}
+            setHueRoseOpen={setHueRoseOpen}
+            viscosity={viscosity}
+            setViscosity={setViscosity}
+            viscosityOpen={viscosityOpen}
+            setViscosityOpen={setViscosityOpen}
+          />
 
           {/* Nose (Aroma & Bouquet) Section */}
           <TouchableOpacity onPress={() => setNoseCollapsed((c) => !c)}>

@@ -9,9 +9,10 @@ import {
   ImageBackground,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { apiUrl } from '../config/api';
+import ErrorBanner from './ErrorBanner';
 
 const WineBg = require('../assets/wine-bg.jpg');
-const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
 type RootStackParamList = {
   Login: undefined;
@@ -29,11 +30,13 @@ type Props = {
 export default function LoginScreen({ navigation, fetchPlan }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
+    setError(null);
     if (email && password) {
       try {
-        const res = await fetch(`${BASE_URL}/api/login`, {
+        const res = await fetch(apiUrl('/api/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
@@ -42,25 +45,26 @@ export default function LoginScreen({ navigation, fetchPlan }: Props) {
         console.log('Login response:', data);
 
         if (data.error) {
-          alert(data.error);
+          setError(data.error);
         } else if (data.success) {
           // Pass navigation for fetchPlan to navigate properly
           await fetchPlan(email, navigation);
           setPassword('');
         } else {
-          alert('Unknown error. Please try again.');
+          setError('Unknown error. Please try again.');
         }
       } catch (err) {
-        alert('Login failed. Please try again.');
+        setError('Login failed. Please try again.');
       }
     } else {
-      alert('Please enter email and password');
+      setError('Please enter email and password');
     }
   };
 
   return (
     <ImageBackground source={WineBg} style={styles.bg}>
       <View style={styles.container}>
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
         <Text style={styles.title}>🍇 Free The Cork</Text>
         <Text style={styles.subtitle}>
           Your personal wine companion. Log in to unlock your cellar!

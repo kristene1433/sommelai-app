@@ -4,11 +4,9 @@ import LoginScreen         from '../components/LoginScreen';
 import SignupScreen        from '../components/SignupScreen';
 import ChoosePlanScreen    from '../components/ChoosePlanScreen';
 import MainTabs            from './MainTabs';
+import { apiUrl }          from '../config/api';
 
 const Stack = createNativeStackNavigator();
-
-/* 🔧  ONE place to change your backend IP  */
-const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
 export default function AppNavigator() {
   const [userIsLoggedIn, setUserIsLoggedIn] = useState(false);
@@ -21,7 +19,7 @@ export default function AppNavigator() {
   // Only keep fetch, remove auto-create:
   const fetchUserPlan = async (email: string) => {
     try {
-      const res = await fetch(`${BASE_URL}/api/preferences/${email}`);
+      const res = await fetch(apiUrl(`/api/preferences/${email}`));
       if (res.status === 404) {
         alert('No preferences found. Please make sure you have completed payment and registration.');
         return;

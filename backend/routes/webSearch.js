@@ -84,7 +84,7 @@ router.post('/wineStores', async (req, res) => {
     console.log('🔍 Location:', location);
     
     const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o-search-preview",
       web_search_options: {},
       messages: [
         {

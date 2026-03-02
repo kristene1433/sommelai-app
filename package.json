@@ -55,5 +55,8 @@
   "engines": {
     "node": "18.x"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "baseline-browser-mapping": "^2.10.0"
+  }
 }

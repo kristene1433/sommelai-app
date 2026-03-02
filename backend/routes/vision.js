@@ -7,9 +7,15 @@ const {
   GetObjectCommand,
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const OpenAI = require('openai');
 
 const router = express.Router();
 const s3     = new S3Client({ region: process.env.AWS_REGION });
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY?.trim(),
+});
 
 const validMime = /^(image\/jpeg|image\/png)$/i;
 const maxBytes  = 4 * 1024 * 1024; // 4 MB
@@ -87,34 +93,27 @@ router.post('/somm', multer.single('photo'), async (req, res) => {
       ],
     });
 
-    // 6) Call OpenAI VISION_MODEL (default gpt-4o for image input)
+    // 6) Call OpenAI VISION_MODEL (default gpt-4.1-mini for image input)
     console.log('[vision] Calling OpenAI VISION_MODEL for image analysis...');
     
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
 
-    const ai = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY?.trim()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: process.env.VISION_MODEL || 'gpt-4o',
-        messages,
-      }),
-    }).then(r => r.json());
+    const response = await openai.chat.completions.create({
+      model: process.env.VISION_MODEL || 'gpt-4.1-mini',
+      messages,
+    });
 
-    if (!ai || ai.error) {
-      console.error('[vision] OpenAI API Error:', ai);
-      throw new Error(ai?.error?.message || 'No response from OpenAI');
+    if (!response || response.error) {
+      console.error('[vision] OpenAI API Error:', response?.error);
+      throw new Error(response?.error?.message || 'No response from OpenAI');
     }
 
     // Extract text from chat completions format
-    const answer = ai?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not analyze the image.';
+    const answer = response?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not analyze the image.';
 
-    console.log('[vision] gpt-4o analysis successful');
+    console.log('[vision] gpt-4.1-mini analysis successful');
     return res.json({ answer, imageUrl });
 
   } catch (err) {

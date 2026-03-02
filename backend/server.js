@@ -6,22 +6,15 @@ const cors = require('cors');
 dotenv.config();
 const app = express();
 
-// Configure CORS to allow requests from Vercel frontend
+// Configure CORS for local / Expo development (Vercel frontend no longer used)
 app.use(cors({
   origin: [
-    'https://sommelai-app.vercel.app',
-    'https://sommelai-gts90r451-kristene1433s-projects.vercel.app',
-    'https://sommelai-aoqfa962y-kristene1433s-projects.vercel.app',
-    'https://sommelai-moh4ni3l9-kristene1433s-projects.vercel.app',
-    'https://sommelai-lawx1c9u2-kristene1433s-projects.vercel.app',
-    'https://sommelai-mk1bvc0jf-kristene1433s-projects.vercel.app',
-    'https://sommelai-1a3xt9mjo-kristene1433s-projects.vercel.app',
-    'http://localhost:3000', // For local development
-    'http://localhost:19006' // For Expo development
+    'http://localhost:3000',  // Local web dev
+    'http://localhost:19006', // Expo dev
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // ⚠️ Stripe webhook must come BEFORE express.json/bodyParser.json!

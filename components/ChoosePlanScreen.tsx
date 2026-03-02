@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, Pressable, ActivityIndicator } from 'react-native';
 import * as Linking from 'expo-linking';
-
+import { apiUrl } from '../config/api';
 
 type Props = {
   navigation: any;
   route: any; // You can type this more strictly if you know your params structure
   fetchPlan: (email: string) => Promise<void>;
 };
-
-
-
-const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com'; // <-- change as needed for your backend
 
 export default function ChoosePlanScreen({ navigation, route, fetchPlan }: Props) {
   const { email, password } = route.params;
@@ -20,7 +16,7 @@ export default function ChoosePlanScreen({ navigation, route, fetchPlan }: Props
   const startStripeCheckout = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/create-checkout-session`, {
+      const res = await fetch(apiUrl('/api/create-checkout-session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

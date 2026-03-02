@@ -5,7 +5,7 @@
 Create a `.env` file in your project root with the following variables:
 
 ```bash
-# OpenAI API Key (for GPT-4o-mini chat and GPT-4o vision)
+# OpenAI API Key (for GPT-4o-mini chat, GPT-4.1-mini vision, GPT-4o-mini-tts speech, and GPT-4o-search-preview web search)
 OPENAI_API_KEY=your_openai_api_key_here
 
 # MongoDB Connection String
@@ -25,7 +25,7 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
 ## How to Get These Keys
 
 1. **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
-   - Required for: Chat functionality (GPT-4o-mini), Image analysis (GPT-4o vision)
+   - Required for: Chat functionality (GPT-4o-mini), Image analysis (GPT-4.1-mini vision), Speech synthesis (GPT-4o-mini-tts), Web search (GPT-4o-search-preview)
    - Cost: $0.15 per 1M input tokens, $0.60 per 1M output tokens (GPT-4o-mini)
 
 2. **MongoDB URI**: Get from [MongoDB Atlas](https://cloud.mongodb.com/)
@@ -45,15 +45,22 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
   - October 2024 knowledge cutoff
   - Supports text and structured outputs
 
-- **GPT-4o**: Used for vision functionality
+- **GPT-4.1-mini**: Used for vision functionality
   - Advanced vision capabilities for image analysis
-  - 128K context window, 16K max output tokens
-  - October 2024 knowledge cutoff
+  - Optimized for image understanding and analysis
   - Supports images, text, and structured outputs
+  - Perfect for wine bottle and menu photo analysis
 
-- **GPT-4o-mini**: Also used for web search functionality
-  - Fast web search capabilities
+- **GPT-4o-search-preview**: Used for web search functionality
+  - Real-time web search capabilities
   - Can search the internet for current information
   - Returns structured data with citations
   - Perfect for finding wine stores and current wine prices
+  - Uses web_search_options for enhanced search capabilities
+
+- **GPT-4o-mini-tts**: Used for speech synthesis
+  - High-quality text-to-speech conversion
+  - Multiple voice options (coral, alloy, echo, fable, onyx, nova, shimmer)
+  - Supports custom instructions for tone and style
+  - Perfect for making the sommelier "speak" responses aloud
 

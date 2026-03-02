@@ -11,6 +11,7 @@ import { OPENAI_API_KEY } from '@env';
 import * as FileSystem from 'expo-file-system';
 import { Audio, AVPlaybackStatusSuccess } from 'expo-av';
 import { Buffer } from 'buffer';
+import { apiUrl } from '../config/api';
 global.Buffer = Buffer;
 
 type Props = { userPlan: 'paid'; userEmail: string };
@@ -19,8 +20,11 @@ type LocalItem = {
   name: string; price: string; store: string;
   address?: string; url?: string; website?: string;
 };
-
-const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
+type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+  type?: 'vision' | 'text';
+};
 
 function cleanAssistantResponse(raw: string) {
   return raw
@@ -39,12 +43,14 @@ export default function WineChat({ userPlan, userEmail }: Props) {
   const [loading, setLoading] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [chatHistory, setChatHistory] = useState<
-    { role: 'user' | 'assistant'; content: string; type?: 'vision' | 'text' }[]
-  >([]);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [photoAsset, setPhotoAsset] = useState<any>(null);
   const scrollRef = useRef<ScrollView | null>(null);
   const [usePreferences, setUsePreferences] = useState(true);
+
+  const appendMessages = (messages: ChatMessage[]) => {
+    setChatHistory(prev => [...prev, ...messages]);
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
@@ -56,7 +62,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       return;
     }
     try {
-      const r = await fetch(`${BASE_URL}/api/preferences/${userEmail}`);
+      const r = await fetch(apiUrl(`/api/preferences/${userEmail}`));
       if (r.ok) setPrefs(await r.json());
     } catch {}
   }, [userPlan, userEmail]);
@@ -71,12 +77,11 @@ export default function WineChat({ userPlan, userEmail }: Props) {
 
   const fetchLocalWine = async (q: string) => {
     try {
-      const zipRes = await fetch(`${BASE_URL}/api/zip/${userEmail}`);
+      const zipRes = await fetch(apiUrl(`/api/zip/${userEmail}`));
       const { zip } = await zipRes.json();
       if (!zip) {
         setResponse('No ZIP on file. Please add it in Profile.');
-        setChatHistory(prev => [
-          ...prev,
+        appendMessages([
           { role: 'user', content: q, type: 'text' },
           { role: 'assistant', content: 'No ZIP on file. Please add it in Profile.', type: 'text' },
         ]);
@@ -84,15 +89,14 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       }
       
       // Use real web search instead of generated results
-      const apiRes = await fetch(`${BASE_URL}/api/webSearch/wineStores`, {
+      const apiRes = await fetch(apiUrl('/api/webSearch/wineStores'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ zip, query: q }),
       });
       if (!apiRes.ok) {
         setResponse('Web search failed.');
-        setChatHistory(prev => [
-          ...prev,
+        appendMessages([
           { role: 'user', content: q, type: 'text' },
           { role: 'assistant', content: 'Web search failed.', type: 'text' },
         ]);
@@ -107,8 +111,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       
       if (!results.length) {
         setResponse(`No wine stores found near ${location}. Try a different wine or location.`);
-        setChatHistory(prev => [
-          ...prev,
+        appendMessages([
           { role: 'user', content: q, type: 'text' },
           { role: 'assistant', content: `No wine stores found near ${location}. Try a different wine or location.`, type: 'text' },
         ]);
@@ -125,14 +128,10 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       }));
       
       setLocalRes(localItems.slice(0, 3));
-      setChatHistory(prev => [
-        ...prev,
-        { role: 'user', content: q, type: 'text' },
-      ]);
+      appendMessages([{ role: 'user', content: q, type: 'text' }]);
     } catch {
       setResponse('Sorry, I could not retrieve local availability.');
-      setChatHistory(prev => [
-        ...prev,
+      appendMessages([
         { role: 'user', content: q, type: 'text' },
         { role: 'assistant', content: 'Sorry, I could not retrieve local availability.', type: 'text' },
       ]);
@@ -180,7 +179,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
     setLoading(true);
     setResponse('');
     try {
-      const r = await fetch(`${BASE_URL}/api/chat/somm`, {
+      const r = await fetch(apiUrl('/api/chat/somm'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,8 +195,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       if (!r.ok) {
         console.error('Backend non-OK response:', r.status, text);
         setResponse(`⚠️ API Error (${r.status}): ${text || 'Unknown error'}`);
-        setChatHistory(prev => [
-          ...prev,
+        appendMessages([
           { role: 'user', content: question, type: 'text' },
           { role: 'assistant', content: `⚠️ API Error (${r.status}): ${text || 'Unknown error'}`, type: 'text' },
         ]);
@@ -213,8 +211,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
         const responseText = data.answer || data.output_text;
         const content = cleanAssistantResponse(responseText);
         setResponse(content);
-        setChatHistory(prev => [
-          ...prev,
+        appendMessages([
           { role: 'user', content: question, type: 'text' },
           { role: 'assistant', content, type: 'text' },
         ]);
@@ -222,15 +219,13 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       } else if (data?.error) {
         console.error('Backend API Error:', data.error);
         setResponse(`⚠️ API Error: ${data.error || 'Unknown error'}`);
-        setChatHistory(prev => [
-          ...prev,
+        appendMessages([
           { role: 'user', content: question, type: 'text' },
           { role: 'assistant', content: `⚠️ API Error: ${data.error || 'Unknown error'}`, type: 'text' },
         ]);
       } else {
         setResponse('⚠️ No answer returned.');
-        setChatHistory(prev => [
-          ...prev,
+        appendMessages([
           { role: 'user', content: question, type: 'text' },
           { role: 'assistant', content: '⚠️ No answer returned.', type: 'text' },
         ]);
@@ -238,8 +233,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
     } catch (error) {
       console.error('Network Error:', error);
       setResponse('⚠️ Network error - please check your connection');
-      setChatHistory(prev => [
-        ...prev,
+      appendMessages([
         { role: 'user', content: question, type: 'text' },
         { role: 'assistant', content: '⚠️ Network error - please check your connection', type: 'text' },
       ]);
@@ -282,7 +276,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
         form.append('previousWineDescription', previousWineDescription);
       }
 
-      const r = await fetch(`${BASE_URL}/api/vision/somm`, {
+      const r = await fetch(apiUrl('/api/vision/somm'), {
         method: 'POST',
         body: form,
       });
@@ -302,8 +296,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
         const responseText = json.answer || json.output_text;
         const clean = cleanAssistantResponse(responseText);
         setResponse(clean);
-        setChatHistory(prev => [
-          ...prev,
+        appendMessages([
           { role: 'user', content: `📸 "${question || 'What can you tell me about this wine?'}"`, type: 'vision' },
           { role: 'assistant', content: clean, type: 'vision' },
         ]);

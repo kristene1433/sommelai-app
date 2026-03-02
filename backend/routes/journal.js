@@ -5,9 +5,14 @@ const router = express.Router();
 
 /* ----------  ADD  (POST)  ---------- */
 router.post('/add', async (req, res) => {
-  console.log('POST /add body:', req.body);  // Add this line for debugging
+  console.log('POST /add body:', req.body);
   try {
-    const newEntry = new WineJournalEntry(req.body);
+    const { userEmail, ...rest } = req.body || {};
+    if (!userEmail) {
+      return res.status(400).json({ error: 'userEmail is required.' });
+    }
+
+    const newEntry = new WineJournalEntry({ ...rest, userEmail });
     const saved = await newEntry.save();
     res.status(201).json(saved);
   } catch (err) {
@@ -17,13 +22,27 @@ router.post('/add', async (req, res) => {
 });
 
 
-/* ----------  DELETE  (by _id)  ---------- */
-/*  Client hits: DELETE /api/journal/<id>   */
+/* ----------  DELETE  (by _id, with owner check)  ---------- */
+/*  Client hits: DELETE /api/journal/<id>?userEmail=<email>   */
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    await WineJournalEntry.findByIdAndDelete(id);
-    res.sendStatus(204);                       // No-Content on success
+    const { userEmail } = req.query;
+
+    if (!userEmail) {
+      return res.status(400).json({ error: 'userEmail query param is required.' });
+    }
+
+    const entry = await WineJournalEntry.findById(id);
+    if (!entry) {
+      return res.status(404).json({ error: 'Entry not found.' });
+    }
+    if (entry.userEmail !== userEmail) {
+      return res.status(403).json({ error: 'Not allowed to delete this entry.' });
+    }
+
+    await entry.deleteOne();
+    res.sendStatus(204); // No-Content on success
   } catch (err) {
     console.error('Error deleting entry:', err);
     res.status(500).json({ error: 'Failed to delete entry.' });
@@ -44,15 +63,28 @@ router.get('/:email', async (req, res) => {
   }
 });
 
-// PUT /api/journal/:id  – edit existing entry
+// PUT /api/journal/:id  – edit existing entry (with owner check)
 router.put('/:id', async (req, res) => {
   try {
+    const { userEmail, ...rest } = req.body || {};
+    if (!userEmail) {
+      return res.status(400).json({ error: 'userEmail is required.' });
+    }
+
+    const existing = await WineJournalEntry.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Entry not found.' });
+    }
+    if (existing.userEmail !== userEmail) {
+      return res.status(403).json({ error: 'Not allowed to edit this entry.' });
+    }
+
     const updated = await WineJournalEntry.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      { ...rest, userEmail },
       { new: true, runValidators: true }
     );
-    if (!updated) return res.status(404).json({ error: 'Entry not found.' });
+
     res.json(updated);
   } catch (err) {
     console.error('Error updating entry:', err);

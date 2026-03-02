@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView, Alert, Pressable, Modal,
 } from 'react-native';
+import { apiUrl } from '../config/api';
 
 type Props = {
   userEmail : string;
@@ -9,8 +10,6 @@ type Props = {
   logout    : () => void;
   navigation: any;
 };
-
-const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
 
 export default function ProfileScreen({ userEmail, userPlan, logout, navigation }: Props) {
   const [userId, setUserId]     = useState('');
@@ -38,7 +37,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
     (async () => {
       try {
         // Load profile info
-        const res = await fetch(`${BASE_URL}/api/preferences/${userEmail}`);
+        const res = await fetch(apiUrl(`/api/preferences/${userEmail}`));
         if (res.ok) {
           const d = await res.json();
           setFirst   (d.firstName || '');
@@ -56,7 +55,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
 
         // Load subscription end date if paid
         if (userPlan === 'paid') {
-          const subRes = await fetch(`${BASE_URL}/api/subscription/end-date?email=${encodeURIComponent(userEmail)}`);
+          const subRes = await fetch(apiUrl(`/api/subscription/end-date?email=${encodeURIComponent(userEmail)}`));
           if (subRes.ok) {
             const json = await subRes.json();
             if (json.endDate) setSubscriptionEnd(json.endDate);
@@ -83,7 +82,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
           Alert.alert('Invalid Email', 'Please enter a valid email address.');
           return;
         }
-        const res = await fetch(`${BASE_URL}/api/preferences/change-email`, {
+        const res = await fetch(apiUrl('/api/preferences/change-email'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, newEmail: email }),

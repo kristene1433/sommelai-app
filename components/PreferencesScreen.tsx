@@ -8,6 +8,7 @@ import {
   Alert,
   Pressable,
 } from 'react-native';
+import { apiUrl } from '../config/api';
 
 const wineTypes = ['Red', 'White', 'Rosé', 'Sparkling', 'Fortified'];
 const flavorProfiles = ['Dry', 'Sweet', 'Earthy', 'Fruity', 'Spicy'];
@@ -17,8 +18,6 @@ type Props = {
   userEmail: string;
 };
 
-const BASE_URL = 'https://sommelai-app-a743d57328f0.herokuapp.com';
-
 export default function PreferencesScreen({ userEmail }: Props) {
   const [selectedWines, setSelectedWines] = useState<string[]>([]);
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
@@ -27,7 +26,7 @@ export default function PreferencesScreen({ userEmail }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${BASE_URL}/api/preferences/${userEmail}`);
+        const res = await fetch(apiUrl(`/api/preferences/${userEmail}`));
         if (res.ok) {
           const data = await res.json();
           setSelectedWines(data.wineTypes || []);
@@ -50,7 +49,7 @@ export default function PreferencesScreen({ userEmail }: Props) {
 
   const savePreferences = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/api/preferences`, {
+      const res = await fetch(apiUrl('/api/preferences'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

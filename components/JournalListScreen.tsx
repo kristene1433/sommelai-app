@@ -13,6 +13,8 @@ import {
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, EntryType } from '../types';
+import { apiUrl } from '../config/api';
+import ErrorBanner from './ErrorBanner';
 
 type Props = { userEmail: string };
 
@@ -28,18 +30,19 @@ export default function JournalListScreen({ userEmail }: Props) {
   const [entries, setEntries] = useState<(EntryType & { _id?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isFocused = useIsFocused();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const fetchEntries = useCallback(async () => {
     try {
-      const res  = await fetch(`https://sommelai-app-a743d57328f0.herokuapp.com/api/journal/${userEmail}`);
+      const res  = await fetch(apiUrl(`/api/journal/${userEmail}`));
       const data = await res.json();
       setEntries(data);
     } catch (err) {
       console.error('Fetch journal error:', err);
-      Alert.alert('Error', 'Failed to fetch journal entries');
+      setError('Failed to fetch journal entries');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -62,15 +65,15 @@ export default function JournalListScreen({ userEmail }: Props) {
         style: 'destructive',
         onPress: async () => {
           try {
-            const res = await fetch(`https://sommelai-app-a743d57328f0.herokuapp.com/api/journal/${id}`, {
+            const res = await fetch(apiUrl(`/api/journal/${id}?userEmail=${encodeURIComponent(userEmail)}`), {
               method: 'DELETE',
             });
             if (res.ok) {
               setEntries((prev) => prev.filter((e) => e._id !== id));
-            } else Alert.alert('Error', 'Failed to delete entry');
+            } else setError('Failed to delete entry');
           } catch (err) {
             console.error('Delete error', err);
-            Alert.alert('Error', 'Network issue while deleting');
+            setError('Network issue while deleting');
           }
         },
       },
@@ -148,15 +151,18 @@ export default function JournalListScreen({ userEmail }: Props) {
   }
 
   const Header = () => (
-    <View style={styles.header}>
-      <Text style={styles.headerTitle}>📚 Your Wine Journal</Text>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => navigation.navigate('WineJournal', { userEmail })}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.addButtonText}>＋ New Entry</Text>
-      </TouchableOpacity>
+    <View>
+      <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>📚 Your Wine Journal</Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate('WineJournal', { userEmail })}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.addButtonText}>＋ New Entry</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
