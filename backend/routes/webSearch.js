@@ -106,7 +106,7 @@ router.post('/wineStores', async (req, res) => {
             'Identify 3 specific bottles or very similar substitutes that are available at local stores near this location. ' +
             'Include real prices (not "Call for price") and direct URLs or store pages when available. ' +
             'If you absolutely cannot find local physical stores, you may include national online options, but clearly choose reputable sources. ' +
-            'Return ONLY the JSON array as described above.`
+            'Return ONLY the JSON array as described above.'
         }
       ],
     });
