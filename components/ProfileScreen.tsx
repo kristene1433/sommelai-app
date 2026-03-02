@@ -105,7 +105,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
           Alert.alert('Error', 'Passwords do not match.');
           return;
         }
-        const res = await fetch(`${BASE_URL}/api/preferences/set-password`, {
+        const res = await fetch(apiUrl('/api/preferences/set-password'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, newPassword: newPass }),
@@ -125,7 +125,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
           Alert.alert('Error', 'Passwords do not match.');
           return;
         }
-        const res = await fetch(`${BASE_URL}/api/preferences/change-password`, {
+        const res = await fetch(apiUrl('/api/preferences/change-password'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, oldPassword: oldPass, newPassword: newPass }),
@@ -139,7 +139,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
       }
 
       // 3. Save profile (other fields)
-      const res = await fetch(`${BASE_URL}/api/preferences`, {
+      const res = await fetch(apiUrl('/api/preferences'), {
         method : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body   : JSON.stringify({
@@ -167,7 +167,7 @@ export default function ProfileScreen({ userEmail, userPlan, logout, navigation 
   const confirmCancelSubscription = async () => {
     setLoadingCancel(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/subscription/cancel`, {
+      const res = await fetch(apiUrl('/api/subscription/cancel'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

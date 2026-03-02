@@ -8,7 +8,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { OPENAI_API_KEY } from '@env';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Audio, AVPlaybackStatusSuccess } from 'expo-av';
 import { Buffer } from 'buffer';
 import { apiUrl } from '../config/api';
@@ -357,7 +357,7 @@ export default function WineChat({ userPlan, userEmail }: Props) {
       const buf = await r.arrayBuffer();
       console.log('[speakResponse] Got audio buffer, size:', buf.byteLength);
       
-      const path = 'file:///tmp/sommelai.mp3';
+      const path = `${FileSystem.cacheDirectory}sommelai.mp3`;
       console.log('[speakResponse] Saving to path:', path);
       
       await FileSystem.writeAsStringAsync(path, Buffer.from(buf).toString('base64'), {

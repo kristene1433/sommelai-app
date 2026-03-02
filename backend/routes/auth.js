@@ -21,6 +21,36 @@ router.post('/api/login', async (req, res) => {
   res.json({ success: true, user: { email: user.email } });
 });
 
+// DEV ONLY: create or update a user without Stripe
+router.post('/api/dev/create-user', async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    let user = await User.findOne({ email });
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    if (!user) {
+      user = new User({
+        email,
+        passwordHash,
+        stripeSubscriptionActive: true,
+      });
+    } else {
+      user.passwordHash = passwordHash;
+      user.stripeSubscriptionActive = true;
+    }
+
+    await user.save();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('dev create-user error:', err);
+    res.status(500).json({ error: 'Failed to create dev user.' });
+  }
+});
+
 module.exports = router;
 
 

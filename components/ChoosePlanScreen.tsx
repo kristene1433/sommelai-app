@@ -16,6 +16,13 @@ export default function ChoosePlanScreen({ navigation, route, fetchPlan }: Props
   const startStripeCheckout = async () => {
     setLoading(true);
     try {
+      // DEV ONLY: create/update user without Stripe
+      await fetch(apiUrl('/api/dev/create-user'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
       // DEV ONLY: bypass Stripe and mark user as paid via preferences
       await fetch(apiUrl('/api/preferences'), {
         method: 'POST',
