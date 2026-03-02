@@ -48,18 +48,26 @@ router.post('/somm', async (req, res) => {
     }
 
     // Build system prompt with preferences if provided
-    let systemPrompt = 'You are a master sommelier and friendly conversationalist. ' +
+    let systemPrompt =
+      'You are a master sommelier and friendly conversationalist. ' +
       'The conversation is about a specific wine identified earlier. ' +
       'For every follow-up question, answer as if referring to that wine unless the user explicitly changes topic. ';
 
     if (usePreferences && preferences) {
-      systemPrompt += `\nUSER PREFERENCES:\n- Wine Types: ${preferences.wineTypes?.join(', ') || 'any'}\n- Flavor Profiles: ${preferences.flavorProfiles?.join(', ') || 'any'}\n`;
+      systemPrompt +=
+        `\nUSER PREFERENCES:\n` +
+        `- Wine Types: ${preferences.wineTypes?.join(', ') || 'any'}\n` +
+        `- Flavor Profiles: ${preferences.flavorProfiles?.join(', ') || 'any'}\n`;
     } else {
       systemPrompt += '\nUSER PREFERENCES: None provided.\n';
     }
 
-    systemPrompt += '\nInstructions:\n' +
+    systemPrompt +=
+      '\nInstructions:\n' +
       '- Always answer about the known wine unless told otherwise.\n' +
+      '- When preferences are ON, prioritize recommendations that match the user\'s wine types and flavor profiles.\n' +
+      '- Even when using preferences, include at least one brief \"classic\" recommendation (a widely loved style) so the user always hears what a traditional sommelier might suggest.\n' +
+      '- When preferences are OFF, answer like a classic sommelier with no personalization.\n' +
       '- Recommend 2–3 varietals when asked.\n' +
       '- Add Perfect Pairing section (no bullets, no numbers, no markdown—just conversational style).\n' +
       '- End with a question to keep chat going.\n' +

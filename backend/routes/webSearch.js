@@ -89,11 +89,24 @@ router.post('/wineStores', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: 'You are a wine expert helping find specific wines for sale online. Search the web for actual wines available for purchase and return ONLY a valid JSON array. Do not include any other text, explanations, or markdown. Return exactly this format: [{"name":"Wine Name","price":"$XX.XX","store":"Store Name","address":"Store Address","url":"https://store.com/wine-link","description":"Brief wine description"}]'
+          content:
+            'You are a wine expert helping users find where to buy a specific wine NEAR THEM. ' +
+            'You MUST prioritize brick-and-mortar wine shops, grocery stores, or liquor stores within about 25 miles of the given ZIP/location. ' +
+            'Only include purely online retailers as a last resort when no local stores are available. ' +
+            'For each result, always include a human-readable street address that clearly contains the city and state. ' +
+            'Return ONLY a valid JSON array, with no extra text, markdown, or commentary. ' +
+            'Return exactly this format: ' +
+            '[{"name":"Wine Name","price":"$XX.XX","store":"Store Name","address":"Store Address, City, ST","url":"https://store.com/wine-link","description":"Brief wine description"}].'
         },
         {
           role: 'user',
-          content: `Find 3 different specific wines for sale online: ${wineName}. Search the web for actual wines available for purchase with real prices and direct purchase links. Look for wines from different stores and websites. Include real prices (not "Call for price"). Return ONLY a JSON array with 3 different wines, each with unique names, prices, store names, and direct URLs to buy the wine.`
+          content:
+            `The user is located near ${location.city}, ${location.region} (${zip}). ` +
+            `They are interested in the following wine (description or context may be long): ${wineName}. ` +
+            'Identify 3 specific bottles or very similar substitutes that are available at local stores near this location. ' +
+            'Include real prices (not "Call for price") and direct URLs or store pages when available. ' +
+            'If you absolutely cannot find local physical stores, you may include national online options, but clearly choose reputable sources. ' +
+            'Return ONLY the JSON array as described above.`
         }
       ],
     });
