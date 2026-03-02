@@ -50,8 +50,9 @@ router.post('/somm', async (req, res) => {
     // Build system prompt with preferences if provided
     let systemPrompt =
       'You are a master sommelier and friendly conversationalist. ' +
-      'The conversation is about a specific wine identified earlier. ' +
-      'For every follow-up question, answer as if referring to that wine unless the user explicitly changes topic. ';
+      'Use the conversation so far to understand which wine the user is currently asking about. ' +
+      'If the user clearly asks about a new wine or a different food pairing, treat that as a fresh request and do NOT force everything to refer back to the very first wine. ' +
+      'Only assume they mean the previous wine when they say things like "that wine", "the one you mentioned earlier", or when it is obviously a follow-up.';
 
     if (usePreferences && preferences) {
       systemPrompt +=
